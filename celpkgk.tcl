@@ -1125,7 +1125,7 @@ proc ::uipkg::info-pkg-update {args} {
 
             ::uipkg::infoText-add-urledaddon-info $urltag $reqname $reqname
 
-            $::uipkg::infoText insert end \n\n propvalue
+            $::uipkg::infoText insert end \n propvalue
         }
     }
     
@@ -1156,13 +1156,14 @@ proc ::uipkg::info-pkg-update {args} {
 		    set urltag dist:$i:$j
 		    
 		    ::uipkg::infoText-add-url $urltag $url [list ::misc::browseurl $url]
-		    $::uipkg::infoText insert end \n\n
+		    $::uipkg::infoText insert end \n
 		}
 	    }
 	}
     }
     set conflictwith [::core::get-conflicted-addons $pkgname]
     if {$conflictwith != ""} {
+	$::uipkg::infoText insert end \n propvalue
 	$::uipkg::infoText insert end [mc "Conflict with:"]\n propname
         set i 0
         foreach addonname $conflictwith {

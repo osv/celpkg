@@ -909,9 +909,7 @@ proc ::core::checksum {dist {dolog true}} {
     set sha256 [getNamedVar $dist -sha256]
     set sha1 [getNamedVar $dist -sha1]
     set name [getNamedVar $dist -name]
-    puts $distpath
     set fname [file join $distpath $name]
-    puts $fname
     if {[file exists $fname]} {
 	if {$md5 != ""} {
 	    if {[catch { set fmd5 [exec md5 -q $fname] } msg]} {
@@ -1822,10 +1820,8 @@ proc ::core::unpack {opts extrdir} {
 	}
 	tar {
 	    if {[catch { exec tar -xf $fname -C $dir } results options]} {
-		if {[catch { exec bsdtar -xf $fname -C $dir } results options]} {
-		    LOG [list $results\n bold]
-		    return 0
-		}
+		LOG [list $results\n bold]
+		return 0
 	    }
 	}
 	default {
@@ -2685,9 +2681,7 @@ proc ::core::export-configuration {filename comment} {
     close $fod
     # create tarbar
     if {[catch {exec tar -czvf $filename.tar.gz -C [file normalize $exportdir] ./ } msg]} {
-	if {[catch {exec bsdtar -czvf $filename.tar.gz -C [file normalize $exportdir] ./ } msg]} {
-	    LOG [list $msg\n red]
-	}
+	LOG [list $msg\n red]
     }
     catch {file delete -force $exportdir}
 }
