@@ -153,6 +153,7 @@ namespace import AtExit::atExit
 #
 # http://wiki.tcl.tk/12704
 proc bgExec {prog readHandler pCount {timeout 0} {toExit ""}} {
+    global tcl_platform
     upvar #0 $pCount myCount
     set myCount [expr {[info exists myCount]?[incr myCount]:1}]
     set p [expr {[lindex [lsort -dict [list 8.4.7 [info patchlevel]]] 0] == "8.4.7"?"| $prog 2>@1":"| $prog 2>@stdout"}]
@@ -160,7 +161,12 @@ proc bgExec {prog readHandler pCount {timeout 0} {toExit ""}} {
     fconfigure $pH -blocking 0; # -buffering line (does it really matter?!)
     set tID [expr {$timeout?[after $timeout [list bgExecTimeout $pH $pCount $toExit]]:{}}]
     fileevent $pH readable [list bgExecGenericHandler $pH $pCount $readHandler $tID]
-    atExit [list exec kill [pid $pH]]; # kill process when exit
+    # kill (SIGQUIT) process when exit
+    if {$tcl_platform(platform) == "windows"} {
+	atExit [list exec kill -9 [pid $pH]]; # for windows need -9 signal
+    } else {
+	atExit [list exec kill [pid $pH]];	
+    }
     return $pH
 }
 
