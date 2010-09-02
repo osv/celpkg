@@ -532,8 +532,10 @@ proc read_index {fname quiet} {
 	    check-brace $line $fname $lineNum
 	    foreach u $line {
 		# add to user db
-		set user [lindex $u 0]
-		set userDB($user) [lindex $u 1]
+		foreach {nick descr} $u {
+		    set userDB($nick) $descr
+		    puts $userDB($nick)
+		}
 	    }
 	} elseif {$addon != "" &&
 		  [in $dbvars $param]} {
