@@ -50,28 +50,28 @@ array set config {
     tree:normal black
     tree:bg white
     tree:installed darkblue
-    text:tittle "-font {TkTextFont 20 bold} -justify center"
-    text:category "-justify right -font {TkTextFont 10}"
-    text:propname "-font {TkTextFont 12 bold}"
-    text:propvalue "-font {TkTextFont 12 normal} -lmargin1 60"
-    text:propbold "-font {TkTextFont 12 bold} -lmargin1 60"
-    text:descript "-font {TkTextFont 14 normal}"
-    text:urlbold "-lmargin1 60 -font {TkTextFont 12} -underline on -background blue -foreground white -relief flat -borderwidth 1"
-    text:urlnormal "-lmargin1 60 -font {TkTextFont 12} -foreground blue -underline on -background {} -relief flat"
-    text:normal "-font {TkTextFont 12}"
-    text:bold "-font {TkTextFont 10 bold}"
-    txtlog:normal "-font {TkTextFont 10}"
-    txtlog:bold "-font {TkTextFont 10 bold}"
-    txtlog:table "-font {TkTextFont 10} -relief solid -borderwidth 1"
-    txtlog:tbllist1 "-font {TkTextFont 10} -relief flat -background #ffffe0"
-    txtlog:tbllist2 "-font {TkTextFont 10} -relief flat -background #fffafa"
-    txtlog:green "-font {TkTextFont 10} -foreground darkgreen"
-    txtlog:red "-font {TkTextFont 10} -foreground red"
-    txtlog:greenbg "-font {TkTextFont 10} -background lightgreen"
-    txtlog:greenbgbold "-font {TkTextFont 10 bold} -background lightgreen"
-    txtlog:download "-font {TkTextFont 8} -background #fff8dc"
-    txtlog:prefix "-font {TkTextFont 10 bold} -foreground darkorange"
-    txtlog:tittle "-font {TkTextFont 14 bold} -justify center"
+    text:tittle "-font {TkTextFont 20 bold} -justify center -wrap word"
+    text:category "-justify right -font {TkTextFont 10} -wrap word"
+    text:propname "-font {TkTextFont 12 bold} -wrap word"
+    text:propvalue "-font {TkTextFont 12 normal} -lmargin1 2c -wrap word"
+    text:propbold "-font {TkTextFont 12 bold} -lmargin1 2c -wrap word"
+    text:descript "-font {TkTextFont 14 normal} -wrap word -lmargin1 1c -lmargin2 0c"
+    text:urlbold "-lmargin1 2c -font {TkTextFont 12} -underline on -background blue -foreground white -relief flat -borderwidth 1 -wrap word"
+    text:urlnormal "-lmargin1 2c -font {TkTextFont 12} -foreground blue -underline on -background {} -relief flat -wrap word"
+    text:normal "-font {TkTextFont 12} -wrap word"
+    text:bold "-font {TkTextFont 10 bold} -wrap word"
+    txtlog:normal "-font {TkTextFont 10} -wrap word"
+    txtlog:bold "-font {TkTextFont 10 bold} -wrap word"
+    txtlog:table "-font {TkTextFont 10} -relief solid -borderwidth 1 -wrap word"
+    txtlog:tbllist1 "-font {TkTextFont 10} -relief flat -background #ffffe0 -wrap word"
+    txtlog:tbllist2 "-font {TkTextFont 10} -relief flat -background #fffafa -wrap word"
+    txtlog:green "-font {TkTextFont 10} -foreground darkgreen -wrap word"
+    txtlog:red "-font {TkTextFont 10} -foreground red -wrap word"
+    txtlog:greenbg "-font {TkTextFont 10} -background lightgreen -wrap word"
+    txtlog:greenbgbold "-font {TkTextFont 10 bold} -background lightgreen -wrap word"
+    txtlog:download "-font {TkTextFont 8} -background #fff8dc -wrap word"
+    txtlog:prefix "-font {TkTextFont 10 bold} -foreground darkorange -wrap word"
+    txtlog:tittle "-font {TkTextFont 14 bold} -justify center -wrap word"
     moreInfo yes
 }
 
@@ -1070,12 +1070,11 @@ proc ::uipkg::info-pkg-update {args} {
     } else {
 	if {[info exists pkgCache($pkgname:license)]} {
 	    set license $pkgCache($pkgname:license)
-	}
+	} else {
+	set license "unknown"}
     }
-    if {$license != {}} {
-	$::uipkg::infoText insert end [mc "License:"] propname
-	$::uipkg::infoText insert end \n$license\n\n propvalue
-    }
+    $::uipkg::infoText insert end [mc "License:"] propname
+    $::uipkg::infoText insert end " $license\n\n" propvalue
 
     if {[info exists pkgDB($pkgname:screenshot)]} {
         $::uipkg::infoText insert end [mc "Screenshots:"] propname
@@ -2006,12 +2005,12 @@ proc editStartCmd {tbl row col text} {
 #------------------------------
 set frame [$nb getframe nb_log]
 pack [set sw [ScrolledWindow $frame.swl]] -fill both -expand true
-$sw setwidget [set ::uilog::text [text $frame.text -font {TkTextFont 10} -state disabled]]
+$sw setwidget [set ::uilog::text [text $frame.text -wrap word -font {TkTextFont 10} -state disabled]]
 # tags
 foreach key [array names config txtlog:* ] {
     set elems [split $key ":"]
     set tagname [lindex $elems 1]
-    eval $::uilog::text tag configure $tagname $config($key)
+    eval $::uilog::text tag configure $tagname $config($key) -wrap word
 }
 # green and red blink
 ::uipkg::textToggle "$::uilog::text tag configure blinkgreen -background \

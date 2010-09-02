@@ -537,7 +537,6 @@ proc read_index {fname quiet} {
 		# add to user db
 		foreach {nick descr} $u {
 		    set userDB($nick) $descr
-		    puts $userDB($nick)
 		}
 	    }
 	} elseif {$addon != "" &&
