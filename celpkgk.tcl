@@ -55,7 +55,7 @@ array set config {
     text:propname "-font {TkTextFont 12 bold} -wrap word"
     text:propvalue "-font {TkTextFont 12 normal} -lmargin1 2c -wrap word"
     text:propbold "-font {TkTextFont 12 bold} -lmargin1 2c -wrap word"
-    text:descript "-font {TkTextFont 14 normal} -wrap word -lmargin1 1c -lmargin2 0c"
+    text:descript "-font {TkTextFont 12 normal} -wrap word -lmargin1 1c -lmargin2 0c"
     text:urlbold "-lmargin1 2c -font {TkTextFont 12} -underline on -background blue -foreground white -relief flat -borderwidth 1 -wrap word"
     text:urlnormal "-lmargin1 2c -font {TkTextFont 12} -foreground blue -underline on -background {} -relief flat -wrap word"
     text:normal "-font {TkTextFont 12} -wrap word"
@@ -848,18 +848,18 @@ proc ::uipkg::author-info {author} {
     $::uipkg::infoText configure -state disabled
 }
 
-proc ::uipkg::committer-info {committer} {
+proc ::uipkg::maintainer-info {maintainer} {
     global pkgDB ::uipkg::infoText config
 
     ::uipkg::disable-action-buttons
 
     $::uipkg::infoText configure -state normal
     $::uipkg::infoText delete 1.0  end
-    $::uipkg::infoText insert end [mc "Addons committed by "]$committer\n tittle
+    $::uipkg::infoText insert end [mc "Addons maintained by "]$maintainer\n tittle
 
     set i 1
-    foreach c [array names pkgDB *:committer] {
-        if [in $pkgDB($c) $committer] {
+    foreach c [array names pkgDB *:maintainer] {
+        if [in $pkgDB($c) $maintainer] {
             set urltag t$i
             set pkgname [lindex [split $c ":"] 0]
             $::uipkg::infoText insert end "$i: " normal
@@ -870,7 +870,7 @@ proc ::uipkg::committer-info {committer} {
             $::uipkg::infoText insert end \n
         }
     }
-    ::uipkg::user-info $committer
+    ::uipkg::user-info $maintainer
 
     $::uipkg::infoText configure -state disabled
 }
@@ -1002,12 +1002,12 @@ proc ::uipkg::info-pkg-update {args} {
     } 
     $::uipkg::infoText insert end \n
 
-    # committer and author
-    if [info exist pkgDB($pkgname:committer)] {
-        $::uipkg::infoText insert end [mc "committer: "] category
-        for {set i 0} {$i < [llength $pkgDB($pkgname:committer)]} {incr i} {
-            set com [lindex $pkgDB($pkgname:committer) $i]
-            ::uipkg::infoText-add-url com$i $com [list ::uipkg::committer-info $com]
+    # maintainer and author
+    if [info exist pkgDB($pkgname:maintainer)] {
+        $::uipkg::infoText insert end [mc "maintainer: "] category
+        for {set i 0} {$i < [llength $pkgDB($pkgname:maintainer)]} {incr i} {
+            set com [lindex $pkgDB($pkgname:maintainer) $i]
+            ::uipkg::infoText-add-url com$i $com [list ::uipkg::maintainer-info $com]
             $::uipkg::infoText insert end " "
         }
     }
@@ -1825,7 +1825,7 @@ setTooltip $searchEntry [mc "Search addon by given pattern
 You can use *, and ?, \[chars\] in pattern"]
 
 foreach f "name all category description version www conflicts distfile
-                unpack committer author 
+                unpack maintainer author 
                 depend screenshot license patch backup copy
                 choice options installmsg deinstallmsg install
                 xpatch modified created" {

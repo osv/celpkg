@@ -45,7 +45,7 @@ Options:
     name            Match name \(default\)
     category        Match category
     author          Match author
-    committer       Match committer
+    maintainer      Match maintainer
     description     Match description
     descr           Match description
     copy            Match copy

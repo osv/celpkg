@@ -48,7 +48,7 @@ variable pkgDB
 # Expression db for "if" command
 variable expDB
 
-# Info about authors, committer
+# Info about authors, maintainer
 variable userDB
 # Cache of installed addons
 variable pkgCache 
@@ -504,7 +504,7 @@ proc read_index {fname quiet} {
     if $GUI {
 	global ::uipkg::pkgTree ::uipkg::infoText
     }
-    variable dbvars "www conflicts distfile unpack committer author 
+    variable dbvars "www conflicts distfile unpack maintainer author 
                 depend screenshot license patch backup copy
                 choice options installmsg deinstallmsg install xpatch"
     if {[catch {set fh [open $fname "r"]} msg]} {
