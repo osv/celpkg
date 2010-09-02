@@ -2213,10 +2213,11 @@ set addons [llength [array names pkgDB *:category]]
 ::uilog::log [list [llength [array names pkgCache *:name]] greenbgbold \
                   " addons installed\n" greenbg]
 
-if {$addons == 0} {
+if {![file exist [file join $pkgpath $dwnlIndexDir]] &&
+    ![file exist [file join $pkgpath userindex]]} {
     if {[tk_messageBox -title [mc "Update?"] -icon question \
              -type yesno -default yes \
-	     -message [mc "No addon found, do you want fetch index now"]] == yes} {
+	     -message [mc "No index files found, do you want fetch now?"]] == yes} {
 	::core::update-index
     }
 }

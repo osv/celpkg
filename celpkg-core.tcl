@@ -55,7 +55,10 @@ variable pkgCache
 # array of tasks to proceed
 variable todo
 
-set indexUrl "http://github.com/osv/celpkg/raw/master/test/index"
+# directory name where index archive saved (subdir of "$pkgDB/")
+variable dwnlIndexDir "index"
+
+set indexUrl "http://github.com/osv/celpkg-index/zipball/master"
 set celVersion 1.6
 set config(firstRun) yes
 set config(profile) "Default"
@@ -2547,13 +2550,17 @@ proc ::core::download-logger {output} {
 
 #------------------------------
 # download file and log progres
+# in $distpath by default
 #------------------------------
-proc ::core::download {url} {
+proc ::core::download {url {destdir {}}} {
     global distpath errorCode
 
-    file mkdir $distpath
+    if {$destdir == {}} {
+	set destdir $distpath
+    }
+    file mkdir $destdir
     LOG [list "=> " prefix [mc "Attempting to fetch from "] normal $url\n normal]
-    set h1 [bgExec "wget -c --no-directories  --no-clobber -P \"$distpath\"
+    set h1 [bgExec "wget -c --no-directories -P \"$destdir\"
                     \"$url\" --progress=dot:mega" ::core::download-logger pCount]
     # wait for finish
     vwait pCount
@@ -2736,6 +2743,10 @@ proc ::core::load-index-recursive {sourcedir quiet} {
     foreach f [lsort [glob -nocomplain -type {f l} [file join $sourcedir *.index]]] {
 	read_index $f $quiet
     }
+    foreach f [lsort [glob -nocomplain -type {f l} [file join $sourcedir *.zip]]] {
+	# read piped zip file
+	read_index "|unzip -p $f \"*.index\"" $quiet	
+    }
 
     # Now look for any sub direcories
     foreach dir [glob -nocomplain -type {d  r} -path $sourcedir *] {
@@ -2744,41 +2755,51 @@ proc ::core::load-index-recursive {sourcedir quiet} {
 }
 
 proc ::core::load-index {{quiet no}} {
-    global pkgpath
-    # load default index file
-    read_index [file join $pkgpath index] $quiet
+    global pkgpath dwnlIndexDir
+
+    # read piped all zip files
+    foreach file [glob -nocomplain -type {f} [file join $pkgpath $dwnlIndexDir *.zip]] {
+	read_index "|unzip -p $file \"*.index\"" $quiet	
+    }
+
+
     # other user's index file in userindex/ directory
     ::core::load-index-recursive [file join $pkgpath userindex] $quiet
     read_pkg $quiet
 }
 
 proc ::core::update-index {} {
-    global GUI config distpath pkgpath indexUrl
+    global GUI config distpath pkgpath indexUrl dwnlIndexDir
     if $GUI {
 	global nb
 	$nb raise nb_log
     }
     LOG [list "===>  " prefix [mc "Updating index files"]\n ]
-    # first remove file old index
-    set packedIndex [file join $distpath [file tail $indexUrl]]
-    catch {file delete $packedIndex}
-    # backup old main index file
-    catch {file copy [file join $pkgpath index] [file join $pkgpath index.back]}
-    ::core::download $indexUrl
-    set out {}
-    ::misc::sleep 600
-    if {[file tail $indexUrl] == "index"} {
-	file copy -force $packedIndex $pkgpath
-    } else {
-	LOG [list "===>  " prefix [mc "Extracting"]\n normal]
-	if {[catch {set out [exec tar -xvf $packedIndex -C $pkgpath] } msg]} {
-	    LOG [list "$msg\n" red]
+
+    # first backup old index dir
+    LOG [list "==>   " prefix [mc "Backup old index files"]\n ]
+
+    set dwnPath [file join $pkgpath $dwnlIndexDir]
+    set backupdDir [file join $pkgpath $dwnlIndexDir.old]
+
+    if {[file exists $dwnPath]} {
+	# remove old backup
+	file delete -force $backupdDir
+	# move to backup
+	if {[catch {file rename -force $dwnPath $backupdDir} msg]} {
+	    LOG [list "Can't clear old index filem\n$msg\n" red]
 	    return
 	}
-	LOG [list $out\n table]
+
     }
+    catch {file mkdir $dwnPath}
+
+    LOG [list "==>   " prefix [mc "Download index"]\n ]
+
+    ::core::download $indexUrl $dwnPath
     ::misc::sleep 100
     ::core::load-index
+
     LOG [list "===>  " prefix [mc "Done"]\n normal]
 }
 
