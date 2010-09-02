@@ -2125,7 +2125,7 @@ proc _treepopup {item} {
     $m add command -accelerator u -label [mc "Cancel task"] -command { 
         set pkgname [$::uipkg::pkgTree itemcget [lindex [$::uipkg::pkgTree selection get] 0] -text]
         ::uipkg::cancel-install $pkgname }
-    $m add command -accelerator c -label [mc "Configure"] -command { 
+    $m add command -accelerator g -label [mc "Configure"] -command { 
         set pkgname [$::uipkg::pkgTree itemcget [lindex [$::uipkg::pkgTree selection get] 0] -text]
         ::uipkg::configure-pkg $pkgname }
 
@@ -2178,7 +2178,7 @@ bind $::uipkg::infoText <Key-G> {
 $::uipkg::pkgTree bindText <1> +::uipkg::info-pkg-update
 $::uipkg::pkgTree bindArea <Key-i> +::uipkg::toggle-mark-for-install
 $::uipkg::pkgTree bindArea <Key-d> +::uipkg::toggle-mark-for-uninstall
-$::uipkg::pkgTree bindArea <Key-c> { # configure
+$::uipkg::pkgTree bindArea <Key-g> { # configure
     set pkgname [$::uipkg::pkgTree itemcget [lindex [$::uipkg::pkgTree selection get] 0] -text]
     ::uipkg::configure-pkg $pkgname
 }
