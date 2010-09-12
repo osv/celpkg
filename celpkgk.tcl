@@ -2108,6 +2108,7 @@ proc ::uipkg::export {} {
 proc _treepopup {item} {
     global icon_install icon_remove icon_reload
     global pkgDB pkgCache
+    global target_program
 
     catch {destroy $::uipkg::pkgTree.menu}     
     set m [menu $::uipkg::pkgTree.menu]
@@ -2147,6 +2148,12 @@ proc _treepopup {item} {
         -compound left -command ::uipkg::import
     $m add command -accelerator {} -label [mc "Export configuration"] \
         -compound left -command ::uipkg::export
+
+    $m add separator
+    $m add command -accelerator {C-x C-l} -label [mc "Start [file tail $target_program]"] \
+        -compound left -command ::misc::start_target_program
+    $m add command -accelerator {C-x C-c} -label [mc "Exit"] \
+        -compound left -command quit?
 
     tk_popup $::uipkg::pkgTree.menu [winfo pointerx [focus]] [winfo pointery [focus]]
 }
@@ -2197,7 +2204,11 @@ $::uipkg::pkgTree bindArea <Key-T> { ::uipkg::deptree
 
     $nb raise nb_log }
 
-$::uipkg::pkgTree bindArea <Control-x><Control-c> {exit}
+# addotional global keys
+bind . <Control-x><Control-l> +::misc::start_target_program
+bind . <Control-x><Control-c> +quit?
+bind . <Control-q> +quit?
+
 $nb raise nb_pkg
 
 #-----------------------------------------------
@@ -2221,12 +2232,17 @@ if {![file exist [file join $pkgpath $dwnlIndexDir]] &&
     }
 }
 
-wm protocol . WM_DELETE_WINDOW {
+proc quit? {} {
+    global mainConfigFile
     if {[tk_messageBox -parent . -title [mc "Close?"] -icon question \
              -type yesno -default no -message [mc "Do You want to quit"]] == yes} {
         ::misc::config:save $mainConfigFile
         exit
     }
+}
+
+wm protocol . WM_DELETE_WINDOW {
+    quit?
 }
 
 set config(firstRun) no

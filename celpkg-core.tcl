@@ -18,7 +18,12 @@ if {[info exists ::env(LC_MESSAGES)]} {
 variable GUI
 
 variable prog_name [mc "Celestia addon manager"]
-variable target_program "Celestia"
+variable target_program "celestia"
+# option name for selection data dir
+variable target_program_opt_dir "--dir"
+# extention for detecting windows file association
+variable target_program_ext ".cel"
+
 # default path setup
 # root dir
 variable cpath "~/sync/celpkg/"
@@ -371,11 +376,14 @@ proc ::misc::config:save {{fname ~/.celpkg.cfg}} {
 #---------------
 proc ::misc::browseurl {url} {
     global env tcl_platform
+    global GUI
 
-    # Set the clipboard value to this url in-case the user needs to paste the 
-    # url in (some windows systems).
-    clipboard clear
-    clipboard append $url
+    if $GUI {
+	# Set the clipboard value to this url in-case the user needs to paste the 
+	# url in (some windows systems).
+	clipboard clear
+	clipboard append $url
+    }
 
     switch -- $tcl_platform(platform) {
 	windows {
@@ -449,6 +457,54 @@ proc ::misc::browseurl {url} {
 		if {[catch { exec $env(BROWSER) -remote $url }]} {
 		    exec $env(BROWSER) $url &
 		}
+	    }
+	}
+    }
+}
+
+#---------------
+# start target program with dir option (for celestia it be --dir)
+# TODO: maybe good to have stdout catch for logs, maybe later?
+#---------------
+proc ::misc::start_target_program {} {
+    global env tcl_platform
+    global target_program target_program_opt_dir target_program_ext
+    global cpath
+
+    switch -- $tcl_platform(platform) {
+	windows {
+	    package require registry
+
+	    set ext $target_program_ext
+	    # Read the type name
+	    set type [registry get HKEY_CLASSES_ROOT\\$ext {}]
+	    # Work out where to look for the command
+	    set path HKEY_CLASSES_ROOT\\$type\\Shell\\Open\\command
+	    # Read the command!
+	    set command [lindex [registry get $path {}] 0]
+
+	    # first try $target_program
+	    if {[catch {eval exec $target_program $target_program_opt_dir [list $cpath] &} emsg]} {
+		# otherwise associated command with $target_program_ext
+		if {[catch {eval exec [list $command] $target_program_opt_dir [list $cpath] &} emsg]} {
+		    MessageDlg .browse_err -aspect 50000 -icon info \
+			-buttons ok -default 0 -cancel 0 -type user \
+			-message \
+			[format \
+			     [::msgcat::mc "Error launching %s\n\n%s"] \
+			     $target_program $emsg]
+		}
+	    }
+	}
+
+        default {
+	    if {[catch {eval exec $target_program $target_program_opt_dir [list $cpath] &} emsg]} {
+		MessageDlg .browse_err -aspect 50000 -icon info \
+		    -buttons ok -default 0 -cancel 0 -type user \
+		    -message \
+		    [format \
+			 [::msgcat::mc "Error launching %s\n\n%s"] \
+			 $target_program $emsg]
 	    }
 	}
     }
