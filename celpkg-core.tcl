@@ -561,7 +561,7 @@ proc read_index {fname quiet} {
 	global ::uipkg::pkgTree ::uipkg::infoText
     }
     variable dbvars "www conflicts distfile unpack maintainer author 
-                depend screenshot license patch backup copy
+                depend screenshot license patch backup copy renamework
                 choice options installmsg deinstallmsg install xpatch"
     if {[catch {set fh [open $fname "r"]} msg]} {
 	LOG [list "Fail to load index file: " blinkyellow $fname\n bold $msg\n bold]
@@ -784,12 +784,72 @@ proc getNamedVar {args name} {
 # Core functions 
 #-----------------------------------------------
 
+#-----------------------------
+# Recursive file search and do command
+# sourcedir must end "/" if it is dir
+# @commandFile - command for file for example [list file copy]
+# @commandPreDir, @commandPostDir - command for directory, before 
+# andafter recursive
+#-----------------------------
+proc ::core::proceed-file-recursive {sourcedir destdir {commandFile {}} {commandPreDir {}} {commandPostDir {}} } {
+    # special case: $sourcedir is _not_ directory i.e not ended by "/", 
+    # do commandFile
+    if {[string index $sourcedir end] != "/"} {
+    	set fileName $sourcedir
+    	set destfile $destdir
+    	if {$commandFile != ""} {
+    	    if [catch { eval $commandFile \"$fileName\" \"$destfile\"} msg] {
+    		LOG [list $msg\n\n red] 
+    	    }
+    	}
+    	return
+    }
+
+    # Fix the directory name, this ensures the directory name is in the
+    # native format for the platform and contains a final directory seperator
+    set sourcedir [string trimright [file join [file normalize $sourcedir] { }]]
+
+    # Look in the current directory for matching files, -type {f r}
+    # means ony readable normal files are looked at, -nocomplain stops
+    # an error being thrown if the returned list is empty
+    foreach fileName [glob -nocomplain -type {f r} -path $sourcedir *] {
+	set destfile [file join $destdir [file tail $fileName]]
+	if {$commandFile != ""} {
+	    if [catch { eval $commandFile \"$fileName\" \"$destfile\"} msg] {
+		LOG [list $msg\n\n red] 
+	    }
+	}
+	::misc::sleep 1
+    }
+
+    # Now look for any sub direcories
+    foreach dirName [glob -nocomplain -type {d  r} -path $sourcedir *] {
+	set dirName $dirName/
+	set dirDest [file join $destdir [file tail $dirName]]
+
+	if {$commandPreDir != ""} {
+	    if [catch { eval $commandPreDir \"$dirDest\" } msg] {
+		LOG [list $msg\n\n red] 
+	    }
+	}
+
+	::core::proceed-file-recursive $dirName $dirDest $commandFile $commandPreDir $commandPostDir
+
+	if {$commandPostDir != ""} {
+	    if [catch { eval $commandPostDir \"$dirDest\" } msg] {
+		LOG [list $msg\n\n red] 
+	    }
+	}
+	::misc::sleep 1
+    }
+}
+
 #------------------------------ 
 # uninstall addon
 #------------------------------
 proc ::core::proceed-uninstall {pkgname force} {
     global dbpath pkgCache pkgDB workdir
-
+    global cpath
     if {!$pkgDB($pkgname:installed)} {
 	LOG [list "Addon not \"$pkgname\" installed\n" greenbg]
 	return true
@@ -849,10 +909,6 @@ proc ::core::proceed-uninstall {pkgname force} {
 	    set dir [file normalize [lindex $line 1]]
 	    LOG\r [list "rmdir \"$dir\"" download]
 	    catch {file delete $dir}
-	} elseif {[lindex $line 0] eq "backup:"} {
-	    # add file to backup list (pair of source dest)
-	    lappend backups [list [file normalize [lindex $line 1]] \
-				 [file normalize [lindex $line 2]]]
 	} elseif {[lindex $line 0] eq "xpatch:"} {
 	    set patch [lindex $line 1]
 	    set fname [getNamedVar $patch -file]
@@ -865,13 +921,9 @@ proc ::core::proceed-uninstall {pkgname force} {
     close $fh 
 
     # now recover backups
-    foreach b $backups {
-	set dst [lindex $b 0]
-	set src [lindex $b 1]
-	LOG\r [list "recover \"$dst\"" download]
-	file mkdir [file dirname $dst]
-	catch {file rename -force $src $dst}
-    }
+    set backupdir [file join $dbpath $pkgname "backup"]/
+    set fdest $cpath
+    ::core::proceed-file-recursive $backupdir $fdest [list file rename -force] [list file mkdir]
 
     # delete backup and rbackup dir
     catch {file delete -force [file join $dbdir "backup"]}
@@ -1481,8 +1533,31 @@ proc ::core::proceed-install {pkgname {depend no} {force no}} {
 			 $pkgname\n blinkred [mc "Reason: cann't unpack archive.\n"] blinkred]
 		return 0
 	    }
+	    ::misc::sleep 100
 	}
     }
+
+    # rename in work dir
+    # does not overwrite existing file if need
+    # FIXME: need allow overwriting, we may extract several archives
+    if [info exist pkgDB($pkgname:renamework)] {
+	LOG [list "===>  " prefix [mc "Rename in work dir for "] normal $pkgname\n bold ]
+	foreach rename $pkgDB($pkgname:renamework) {
+	    if {![::core::check-options $pkgname $rename]} {
+		continue }
+	    if {[llength $rename] == 0} {
+		continue }    
+	    set dest [file join $extractdir [lindex $rename 1]]
+	    set src [file join $extractdir [lindex $rename 0]]
+	    # make sure that dir exist
+	    file mkdir [file dirname $dest]
+	    if [catch {file rename $src $dest} msg] {
+		LOG [list $msg\n red]
+	    }
+	}
+	::misc::sleep 100
+    }
+
     # apply patches
     if [info exist pkgDB($pkgname:patch)] {
 	LOG [list "===>  " prefix [mc "Applying patches for "] normal $pkgname\n bold ]
@@ -1496,6 +1571,7 @@ proc ::core::proceed-install {pkgname {depend no} {force no}} {
 		    LOG [list "=> " prefix [mc "Can not apply patch. Abort installation\n"] blinkred]
 		    return false
 		}
+		::misc::sleep 100
 	    }
 	}
     }
@@ -1537,29 +1613,60 @@ proc ::core::proceed-install {pkgname {depend no} {force no}} {
 
     close $finfo
 
-    ::misc::sleep 100
+    ::misc::sleep 200
 
     # content file
     set fid [open $contentfile w]
     fconfigure $fid -encoding utf-8
-    puts $fid "# -*-coding: utf-8 -*-"
+    puts $fid "# -*- coding: utf-8; mode: tcl -*-"
 
     # make backup if need
     if [info exist pkgDB($pkgname:backup)] {
-	# copy into backup dit of addon db folder
+	LOG [list "===>  " prefix [mc "Make backups for "] normal $pkgname\n\n bold ]
+	# copy into backup dir of addon db folder from root dir
 	foreach f $pkgDB($pkgname:backup) {
 	    if {![::core::check-options $pkgname $f]} {
 		continue }
 	    set backupdir [file join $dbdir "backup" [file dirname $f]]
-	    file mkdir $backupdir
 	    set fsource [file join $cpath $f]
-	    catch {file copy -force $fsource $backupdir}
-	    # add to content file info about backup
-	    puts $fid "backup: \"$fsource\" \"[file join $backupdir [file tail $f]]\""
+	    # if it is dir - append / to end of source name
+	    if [file isdirectory $fsource] {
+		set fsource $fsource/
+		set backupdir [file join $backupdir [file tail $f]]
+	    }
+	    file mkdir $backupdir
+	    LOG\r [list "backup \"$fsource\"" download]
+
+	    ::core::proceed-file-recursive $fsource $backupdir \
+		[list file copy -force] [list file mkdir]
 	}
+	::misc::sleep 200
+
+	# Make rbackup for reinstall some files (backups file)
+	# if depended addon will be reinstalled
+	# i.e backuping files from this addon too
+	# Just copy files from extract dir (files is renamed before)
+	LOG [list "===>  " prefix [mc "Prepare rbackups for "] normal $pkgname\n bold ]
+	LOG [list \n normal]
+	foreach f $pkgDB($pkgname:backup) {
+	    if {![::core::check-options $pkgname $f]} {
+		continue }
+	    set rbackupdir [file join $dbdir "rbackup" [file dirname $f]]
+	    set fsource [file join $extractdir $f]
+	    # if it is dir - append / to end of source name
+	    if [file isdirectory $fsource] {
+		set fsource $fsource/
+		set rbackupdir [file join $rbackupdir [file tail $f]]
+	    }
+	    file mkdir $rbackupdir
+	    LOG\r [list "rbackup \"$fsource\"" download]
+
+	    ::core::proceed-file-recursive $fsource $rbackupdir \
+		[list file copy -force] [list file mkdir]
+	}
+	::misc::sleep 200
     }
 
-    ::misc::sleep 100
     LOG [list "===>  " prefix [mc "Installing for "] normal $pkgname\n\n bold ]
 
     # copy files first if need
@@ -1576,32 +1683,33 @@ proc ::core::proceed-install {pkgname {depend no} {force no}} {
 	    # make sure that dest dir exist
 	    set fsrc [file join $extractdir $fsource]
 	    catch { file mkdir [file dirname $fdest] }
-	    catch { file copy -force $fsrc $fdest }
-	    if [file isdirectory $fsrc] {
-		# need recursive rm files
-		proc ::core:find-and-logrm-recursive {sourcedir destdir fh} {
-		    set sourcedir [string trimright [file join [file normalize $sourcedir] { }]]
+	    puts $fid {}
+	    puts $fid "# clean for copy \"$fsrc\" \"$fdest\""
+	    proc ::core::tmp-copyFile {fh fileSrc fileDest} {
+		file copy -force $fileSrc $fileDest
+		puts $fh "rmfile: \"$fileDest\""
+	    }	    
 
-		    foreach fileName [glob -nocomplain -type {f r} -path $sourcedir *] {
-			set destfile [file join $destdir [file tail $fileName]]
-			puts $fh "rmfile: \"$destfile\""
-		    }
-
-		    # Now look for any sub direcories
-		    foreach dirName [glob -nocomplain -type {d  r} -path $sourcedir *] {
-			set dirDest [file join $destdir [file tail $dirName]]
-			::core:find-and-logrm-recursive $dirName $dirDest $fh
-			puts $fh "rmdir: \"$dirDest\""
-		    }
-		}
-		
-		puts $fid "# clean for copy \"$fsrc\" \"$fdest\""
-		::core:find-and-logrm-recursive $fsrc $fdest $fid
-		puts $fid "rmdir: \"$fdest\""
-		puts $fid "# end clean for copy \"$fsrc\" \"$fdest\""
-	    } else {
-		puts $fid "rmfile: \"$fdest\""
+	    proc ::core:tmp-mkDir {dir} {
+		file mkdir $dir
 	    }
+
+	    proc ::core::tmp-checkDirPost {fh dirName} {
+		# remove empty dir, if it not empty log "rmdir" to contents file
+		if [catch {file delete $dirName}] {
+		    puts $fh "rmdir: \"$dirName\""
+		}
+	    }
+
+
+	    ::core::proceed-file-recursive $fsrc $fdest \
+		[list ::core::tmp-copyFile $fid] \
+		[list ::core:tmp-mkDir] \
+		[list ::core::tmp-checkDirPost $fid]
+
+	    puts $fid "rmdir: \"$fdest\""
+	    puts $fid "# end clean for copy \"$fsrc\" \"$fdest\""
+	    puts $fid ""
 	    ::misc::sleep 1
 	}
 	::misc::sleep 100
@@ -1650,8 +1758,9 @@ proc ::core::proceed-install {pkgname {depend no} {force no}} {
     # install extracted files with install rules
     set fid [open $contentfile a]
     fconfigure $fid -encoding utf-8
+    puts $fid "\n# installed files:"
     ::core::install-extracted-files $allowrules $denyrules $extractdir $fid $cpath
-    
+    puts $fid {}
     if [info exists pkgDB($pkgname:xpatch)] {
 	file mkdir $extractdir
 	LOG [list "===>  " prefix [mc "Post install configuring for "] normal $pkgname\n bold ]
@@ -1675,26 +1784,6 @@ proc ::core::proceed-install {pkgname {depend no} {force no}} {
     }
 
     ::misc::sleep 100
-
-    # Make rbackup for reinstall some files (backups file)
-    # if depended addon will be reinstalled
-    # i.e backuping files from this addon too
-    if [info exist pkgDB($pkgname:backup)] {
-	LOG [list "===>  " prefix [mc "Prepare backups for "] normal $pkgname\n bold ]
-	LOG [list \n normal]
-	foreach f $pkgDB($pkgname:backup) {
-	    if {![::core::check-options $pkgname $f]} {
-		continue }
-	    set rbackupdir [file join $dbdir "rbackup" [file dirname $f]]
-	    file mkdir $rbackupdir
-	    set fsource [file join $cpath $f]
-	    LOG\r [list "rbackup \"$fsource\"" download]
-	    catch {file copy -force $fsource $rbackupdir}
-	    puts $fid "rbackup: \"$fsource\" \"[file join $rbackupdir [file tail $f]]\""
-	    ::misc::sleep 1
-	}
-	::misc::sleep 100
-    }
 
     # clear work
     file delete -force $extractdir
@@ -1722,18 +1811,9 @@ proc ::core::proceed-install {pkgname {depend no} {force no}} {
 	    ::core::add-to-required $pkgname $depname
 	    LOG [list "=> " prefix "Fix " normal \"$depname\" bold " that require " normal \"$pkgname\"\n bold ]
 	    LOG [list \n normal]
-	    set fh [open [file normalize [file join $dbpath $depname "contents"]] "r"]
-	    while {[gets $fh line] >= 0} {
-		if {[lindex $line 0] eq "rbackup:"} {
-		    # add file to backup list (pair of source dest)
-		    set dst [file normalize [lindex $line 1]]
-		    set	src [file normalize [lindex $line 2]]
-		    LOG\r [list "reinstall \"$dst\"" download]
-		    file mkdir [file dirname $dst]
-		    catch {file copy -force $src $dst}
-		}
-	    }
-	    close $fh 
+	    set backupdir [file join $dbpath $depname "rbackup"]/
+	    set fdest $cpath
+	    ::core::proceed-file-recursive $backupdir $fdest [list file copy -force] [list file mkdir]
 	}
     }
 
@@ -1792,23 +1872,16 @@ proc ::core::proceed-install {pkgname {depend no} {force no}} {
 # install files from work dir using filters and log to fh
 #---------------
 proc ::core::install-extracted-files {allowrules denyrules sourcedir fh destdir} {
-    # Fix the directory name, this ensures the directory name is in the
-    # native format for the platform and contains a final directory seperator
-    set sourcedir [string trimright [file join [file normalize $sourcedir] { }]]
-
-    # Look in the current directory for matching files, -type {f r}
-    # means ony readable normal files are looked at, -nocomplain stops
-    # an error being thrown if the returned list is empty
-    foreach fileName [glob -nocomplain -type {f r} -path $sourcedir *] {
+    proc ::core::tmp-checkfile {allowrules denyrules fh fileSrc fileDest} {
 	set allow 0
 	set md5 0
 	# first check pass rules
 	foreach rule $allowrules {
 	    set nocase [lindex $rule 1]
 	    if {$nocase} {
-		set match [string match -nocase *[lindex $rule 0] $fileName]
+		set match [string match -nocase *[lindex $rule 0] $fileSrc]
 	    } else {
-		set match [string match  *[lindex $rule 0] $fileName]
+		set match [string match  *[lindex $rule 0] $fileSrc]
 	    }
 	    if {$match} {
 		set allow 1
@@ -1819,39 +1892,42 @@ proc ::core::install-extracted-files {allowrules denyrules sourcedir fh destdir}
 	foreach rule $denyrules {
 	    set nocase [lindex $rule 1]
 	    if {$nocase} {
-		set match [string match -nocase *[lindex $rule 0] $fileName]
+		set match [string match -nocase *[lindex $rule 0] $fileSrc]
 	    } else {
-		set match [string match  *[lindex $rule 0] $fileName]
+		set match [string match  *[lindex $rule 0] $fileSrc]
 	    }
 	    if {$match} {
 		set allow 0
 	    }
 	}
 	if {$allow} {
-	    set destfile [file join $destdir [file tail $fileName]]
-	    file rename -force $fileName $destfile
+	    file rename -force $fileSrc $fileDest
 	    if {$md5} { # md5
-		set fmd5 [::md5::md5 -hex -filename [file normalize $destfile]]
-		puts $fh "rmfile: \"$destfile\" \t$fmd5"
+		set fmd5 [::md5::md5 -hex -filename [file normalize $fileDest]]
+		puts $fh "rmfile: \"$fileDest\" \t$fmd5"
 	    } else {
-		puts $fh "rmfile: \"$destfile\""
+		puts $fh "rmfile: \"$fileDest\""
 	    }
-	    LOG\r [list "install $destfile" download]
-	    ::misc::sleep 1
+	    LOG\r [list "install $fileDest" download]
 	}
     }
 
-    # Now look for any sub direcories
-    foreach dirName [glob -nocomplain -type {d  r} -path $sourcedir *] {
-	set dirDest [file join $destdir [file tail $dirName]]
-	file mkdir $dirDest
-	::misc::sleep 1
-	LOG\r [list "mkdir $dirDest" download]
-	# Recusively call the routine on the sub directory and append any
-	# new files to the results
-	::core::install-extracted-files $allowrules $denyrules $dirName $fh $dirDest
-	puts $fh "rmdir: \"$dirDest\""
+    proc ::core::tmp-checkDirPre {dirName} {
+	file mkdir $dirName
+	LOG\r [list "mkdir $dirName" download]
     }
+
+    proc ::core::tmp-checkDirPost {fh dirName} {
+	# remove empty dir, if it not empty log "rmdir" to contents file
+	if [catch {file delete $dirName}] {
+	    puts $fh "rmdir: \"$dirName\""
+	}
+    }
+
+    ::core::proceed-file-recursive $sourcedir/ $destdir/ \
+	[list ::core::tmp-checkfile $allowrules $denyrules $fh] \
+	[list ::core::tmp-checkDirPre] \
+	[list ::core::tmp-checkDirPost $fh]
 }
 
 proc ::core::unpack {opts extrdir} {
@@ -1863,14 +1939,14 @@ proc ::core::unpack {opts extrdir} {
     ::misc::sleep 1
 
     if {![string length $fname]} {
-	puts "Nil file name for unpack"
+	LOG [list "Nil file name for unpack\n" blinkred]
 	return 0
     }
     set fname [file normalize [file join $distpath $fname]]
     set dir [ file normalize [file join $extrdir $dir]]
 
     file mkdir $dir
-    puts $fname
+    LOG [list $fname\n download]
     switch $packer {
 	zip { 
 	    if {[catch { exec unzip -o -d $dir $fname } results options]} {
