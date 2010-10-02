@@ -63,12 +63,15 @@ array set config {
     txtlog:normal "-font {TkTextFont 10} -wrap word"
     txtlog:bold "-font {TkTextFont 10 bold} -wrap word"
     txtlog:table "-font {TkTextFont 10} -relief solid -borderwidth 1 -wrap word"
-    txtlog:tbllist1 "-font {TkTextFont 10} -relief flat -background #ffffe0 -wrap word"
-    txtlog:tbllist2 "-font {TkTextFont 10} -relief flat -background #fffafa -wrap word"
+    txtlog:tbllist1 "-font {TkTextFont 10} -relief solid -borderwidth 1 -background #ffffb0 -wrap word"
+    txtlog:tbllist2 "-font {TkTextFont 10} -relief solid -borderwidth 1 -background #ffffff -wrap word"
     txtlog:green "-font {TkTextFont 10} -foreground darkgreen -wrap word"
     txtlog:red "-font {TkTextFont 10} -foreground red -wrap word"
     txtlog:greenbg "-font {TkTextFont 10} -background lightgreen -wrap word"
     txtlog:greenbgbold "-font {TkTextFont 10 bold} -background lightgreen -wrap word"
+    txtlog:redbgm "-font {TkTextFont 10 normal} -background tomato -wrap word"
+    txtlog:yellowbgm "-font {TkTextFont 10 normal} -background yellow -wrap word"
+    txtlog:greenbgm "-font {TkTextFont 10 normal} -background lightgreen -wrap word"
     txtlog:download "-font {TkTextFont 8} -background #fff8dc -wrap word"
     txtlog:prefix "-font {TkTextFont 10 bold} -foreground darkorange -wrap word"
     txtlog:tittle "-font {TkTextFont 14 bold} -justify center -wrap word"
@@ -1370,6 +1373,12 @@ proc ::uipkg::configure-pkg {pkgname} {
 proc ::uipkg::proceed-todo {} {
     global todo installButton uninstallButton proceedButton ::uipkg::pkgTree nb
     global pkgCache pkgDB sesInstalled
+    # array of install status and error description
+    global todoStatus
+
+    # clear todoStatus
+    catch {unset todoStatus}
+
     ::uilog::clearlog
     $nb raise nb_log
     $nb itemconfigure nb_pkg -state disabled
@@ -1471,11 +1480,23 @@ proc ::uipkg::proceed-todo {} {
             ::core::proceed-install $pkgname $todo($pkgname:recursive) $todo($pkgname:force)
         }
     }
-    
-    if [llength $sesInstalled] {
-	LOG [list [mc "Next addons was installed(upgraded):\n"] tittle]
-	foreach a $sesInstalled {
-	    LOG [list $a\n table]
+
+    # show install status
+    set resaddons [array names todoStatus *:status]
+    if [llength $resaddons] {
+	LOG [list [mc "Results:"]\n tittle]
+	foreach a $resaddons {
+	    set addon [lindex [split $a :] 0]
+	    LOG [list "$addon\t\t\t" tbllist1]
+	    # First print all except :status
+	    foreach s [array names todoStatus $addon:*] {
+		if {$s != "$addon:status"} {
+		    LOG $todoStatus($s)
+		    LOG [list \t\t\t tbllist2]
+		}
+	    }
+	    # now status
+	    LOG $todoStatus($addon:status)
 	}
     }
 

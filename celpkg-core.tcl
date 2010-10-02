@@ -794,15 +794,17 @@ proc getNamedVar {args name} {
 proc ::core::proceed-file-recursive {sourcedir destdir {commandFile {}} {commandPreDir {}} {commandPostDir {}} } {
     # special case: $sourcedir is _not_ directory i.e not ended by "/", 
     # do commandFile
+    set problems no
     if {[string index $sourcedir end] != "/"} {
     	set fileName $sourcedir
     	set destfile $destdir
     	if {$commandFile != ""} {
     	    if [catch { eval $commandFile \"$fileName\" \"$destfile\"} msg] {
     		LOG [list $msg\n\n red] 
+		set problems yes
     	    }
     	}
-    	return
+    	return $problems
     }
 
     # Fix the directory name, this ensures the directory name is in the
@@ -817,6 +819,7 @@ proc ::core::proceed-file-recursive {sourcedir destdir {commandFile {}} {command
 	if {$commandFile != ""} {
 	    if [catch { eval $commandFile \"$fileName\" \"$destfile\"} msg] {
 		LOG [list $msg\n\n red] 
+		set problems yes
 	    }
 	}
 	::misc::sleep 1
@@ -830,18 +833,23 @@ proc ::core::proceed-file-recursive {sourcedir destdir {commandFile {}} {command
 	if {$commandPreDir != ""} {
 	    if [catch { eval $commandPreDir \"$dirDest\" } msg] {
 		LOG [list $msg\n\n red] 
+		set problems yes
 	    }
 	}
 
-	::core::proceed-file-recursive $dirName $dirDest $commandFile $commandPreDir $commandPostDir
-
+	set res [::core::proceed-file-recursive $dirName $dirDest $commandFile $commandPreDir $commandPostDir]
+	if {!$problems && $res} {
+	    set problems yes
+	}
 	if {$commandPostDir != ""} {
 	    if [catch { eval $commandPostDir \"$dirDest\" } msg] {
 		LOG [list $msg\n\n red] 
+		set problems yes
 	    }
 	}
 	::misc::sleep 1
     }
+    return $problems
 }
 
 #------------------------------ 
@@ -850,6 +858,9 @@ proc ::core::proceed-file-recursive {sourcedir destdir {commandFile {}} {command
 proc ::core::proceed-uninstall {pkgname force} {
     global dbpath pkgCache pkgDB workdir
     global cpath
+    # array of addon's status for pretty report
+    global todoStatus
+
     if {!$pkgDB($pkgname:installed)} {
 	LOG [list "Addon not \"$pkgname\" installed\n" greenbg]
 	return true
@@ -869,6 +880,7 @@ proc ::core::proceed-uninstall {pkgname force} {
     if {!$force && $numofrequired > 0} {
 	LOG [list "===>  " prefix [mc "Skip deinstallation. This addon is required for "] \
 		 normal $numofrequired blinkgreen [mc " addon(s) (no force specified)"]\n normal]
+	set todoStatus($pkgname:status) [list [mc "Skipped, required for $numofrequired addons(s)."]\n yellowbgm]
 	return false
     }
     # remove required_by first of this
@@ -877,6 +889,7 @@ proc ::core::proceed-uninstall {pkgname force} {
 
     if {[catch {set fh [open $contentfile "r"]} msg] } {
 	LOG [list [mc "Can't read content file:\n"] bold $msg\n red]
+	set todoStatus($pkgname:status) [list [mc "Failed, missing context files."]\n redbgm]
 	return false
     }
     fconfigure $fh -encoding utf-8
@@ -923,7 +936,9 @@ proc ::core::proceed-uninstall {pkgname force} {
     # now recover backups
     set backupdir [file join $dbpath $pkgname "backup"]/
     set fdest $cpath
-    ::core::proceed-file-recursive $backupdir $fdest [list file rename -force] [list file mkdir]
+    if [::core::proceed-file-recursive $backupdir $fdest [list file rename -force] [list file mkdir]] {
+	set todoStatus($pkgname:recoverbackup) [list [mc "Problem with recovering backup."]\n yellowbgm]
+    }
 
     # delete backup and rbackup dir
     catch {file delete -force [file join $dbdir "backup"]}
@@ -939,10 +954,12 @@ proc ::core::proceed-uninstall {pkgname force} {
 
     if {[catch {file delete $contentfile} msg] } {
 	LOG [list [mc "Can't delete content file:\n"] bold $msg\n red]
+	set todoStatus($pkgname:status) [list [mc "Failed."]\n redbgm]
 	return false
     }
     if {[catch {file delete $infofile} msg] } {
 	LOG [list [mc "Can't delete info file:\n"] bold $msg\n red]
+	set todoStatus($pkgname:status) [list [mc "Failed."]\n redbgm]
 	return false
     }
 
@@ -981,6 +998,7 @@ proc ::core::proceed-uninstall {pkgname force} {
 
     LOG [list "===>   " prefix [mc "Addon \""] blinkgreen $pkgname blinkgreen [mc "\" deinstalled successfully\n"] blinkgreen]
     ::misc::sleep 100
+    set todoStatus($pkgname:status) [list [mc "Deinstalled."]\n greenbgm]
     return true
 }
 
@@ -1389,13 +1407,18 @@ proc ::core::update-options { pkgname } {
 proc ::core::proceed-install {pkgname {depend no} {force no}} {
     global dbpath distpath opt workdir cpath
     global pkgCache pkgDB sesInstalled
+    global todoStatus
 
     ::core::update-options $pkgname
 
     set dbdir [file join $dbpath $pkgname]
     set contentfile [file normalize [file join $dbdir "contents"]]
     set infofile [file normalize [file join $dbdir "pkginfo"]]
+
+    # just for log
+    set upgrade yes
     if {!$pkgDB($pkgname:installed)} {
+	set upgrade no
 	LOG [list "===>  " prefix [mc "Installing addon "] normal \
 		 $pkgname bold " (recursive: $depend, force: $force)\n" normal]
     } else {
@@ -1422,7 +1445,7 @@ proc ::core::proceed-install {pkgname {depend no} {force no}} {
 	}
 	LOG [list "===> " prefix [mc "Aborted installation of addon "] blinkred \
 		 $pkgname\n blinkred ]
-
+	set todoStatus($pkgname:status) [list [mc "Aborted, conflicts found."]\n redbgm]
 	return false
     }
 
@@ -1461,6 +1484,7 @@ proc ::core::proceed-install {pkgname {depend no} {force no}} {
 	    }
 	    LOG [list "===> " prefix [mc "Aborted installation of addon "] blinkred \
 		     $pkgname\n blinkred ]
+	    set todoStatus($pkgname:status) [list [mc "Aborted, some files not downloaded or checksum mismatch."]\n redbgm]
 	    return false
 	}
     }
@@ -1498,6 +1522,7 @@ proc ::core::proceed-install {pkgname {depend no} {force no}} {
 			LOG [list "=> " prefix [mc "Dependence not installed:\n"] normal $faildepend\n table]
 			LOG [list "===> " prefix [mc "Aborted installation of addon "] blinkred \
 				 $pkgname\n blinkred ]
+			set todoStatus($pkgname:status) [list [mc "Aborted, dependence not installed."]\n redbgm]
 			::misc::sleep 200
 			return false
 		    }
@@ -1530,7 +1555,8 @@ proc ::core::proceed-install {pkgname {depend no} {force no}} {
 		continue }
 	    if {![::core::unpack $pack $extractdir]} {
 		LOG [list "===> " prefix [mc "Aborted installation of addon "] blinkred \
-			 $pkgname\n blinkred [mc "Reason: cann't unpack archive.\n"] blinkred]
+			 $pkgname\n blinkred [mc "Reason: can't unpack archive.\n"] blinkred]
+		set todoStatus($pkgname:status) [list [mc "Aborted, can't unpack archive."]\n redbgm]
 		return 0
 	    }
 	    ::misc::sleep 100
@@ -1553,6 +1579,7 @@ proc ::core::proceed-install {pkgname {depend no} {force no}} {
 	    file mkdir [file dirname $dest]
 	    if [catch {file rename $src $dest} msg] {
 		LOG [list $msg\n red]
+		set todoStatus($pkgname:rename) [list [mc "Problem renaming files. Addon may be not correct installed."]\n yellowbgm]
 	    }
 	}
 	::misc::sleep 100
@@ -1569,6 +1596,7 @@ proc ::core::proceed-install {pkgname {depend no} {force no}} {
 		if {[catch {exec patch -s -p0 -d $extractdir -i $filename} msg]} {
 		    LOG [list $msg\n bold]
 		    LOG [list "=> " prefix [mc "Can not apply patch. Abort installation\n"] blinkred]
+		    set todoStatus($pkgname:status) [list [mc "Aborted, can't not apply patch."]\n redbgm]
 		    return false
 		}
 		::misc::sleep 100
@@ -1637,8 +1665,10 @@ proc ::core::proceed-install {pkgname {depend no} {force no}} {
 	    file mkdir $backupdir
 	    LOG\r [list "backup \"$fsource\"" download]
 
-	    ::core::proceed-file-recursive $fsource $backupdir \
-		[list file copy -force] [list file mkdir]
+	    if [::core::proceed-file-recursive $fsource $backupdir \
+		      [list file copy -force] [list file mkdir]] {
+		set todoStatus($pkgname:backup) [list [mc "Problem backuping."]\n yellowbgm]
+	    }
 	}
 	::misc::sleep 200
 
@@ -1661,8 +1691,10 @@ proc ::core::proceed-install {pkgname {depend no} {force no}} {
 	    file mkdir $rbackupdir
 	    LOG\r [list "rbackup \"$fsource\"" download]
 
-	    ::core::proceed-file-recursive $fsource $rbackupdir \
-		[list file copy -force] [list file mkdir]
+	    if [::core::proceed-file-recursive $fsource $rbackupdir \
+		      [list file copy -force] [list file mkdir]] {
+		set todoStatus($pkgname:rbackup) [list [mc "Problem Rbackuping."]\n yellowbgm]
+	}
 	}
 	::misc::sleep 200
     }
@@ -1701,11 +1733,12 @@ proc ::core::proceed-install {pkgname {depend no} {force no}} {
 		}
 	    }
 
-
-	    ::core::proceed-file-recursive $fsrc $fdest \
-		[list ::core::tmp-copyFile $fid] \
-		[list ::core:tmp-mkDir] \
-		[list ::core::tmp-checkDirPost $fid]
+	    if [::core::proceed-file-recursive $fsrc $fdest \
+		      [list ::core::tmp-copyFile $fid] \
+		      [list ::core:tmp-mkDir] \
+		      [list ::core::tmp-checkDirPost $fid]] {
+		set todoStatus($pkgname:copy) [list [mc "Problem copying."]\n yellowbgm]
+	    }
 
 	    puts $fid "rmdir: \"$fdest\""
 	    puts $fid "# end clean for copy \"$fsrc\" \"$fdest\""
@@ -1759,7 +1792,10 @@ proc ::core::proceed-install {pkgname {depend no} {force no}} {
     set fid [open $contentfile a]
     fconfigure $fid -encoding utf-8
     puts $fid "\n# installed files:"
-    ::core::install-extracted-files $allowrules $denyrules $extractdir $fid $cpath
+    if {[::core::install-extracted-files $allowrules $denyrules $extractdir $fid $cpath]} {
+	set todoStatus($pkgname:install) [list [mc "Some files not installed."]\n yellowbgm]
+    }
+
     puts $fid {}
     if [info exists pkgDB($pkgname:xpatch)] {
 	file mkdir $extractdir
@@ -1773,6 +1809,7 @@ proc ::core::proceed-install {pkgname {depend no} {force no}} {
 		if {![::core::apply-xpatch $p $extractdir $fid]} {
 		    LOG [list "===> " prefix [mc "Addon may not work"]\n blinkred \
 			    ]
+		    set todoStatus($pkgname:xpatch) [list [mc "XPatch failed, addon may not work properly."]\n yellowbgm]
 		    # todo mark as broken
 		}
 
@@ -1813,7 +1850,9 @@ proc ::core::proceed-install {pkgname {depend no} {force no}} {
 	    LOG [list \n normal]
 	    set backupdir [file join $dbpath $depname "rbackup"]/
 	    set fdest $cpath
-	    ::core::proceed-file-recursive $backupdir $fdest [list file copy -force] [list file mkdir]
+	    if [::core::proceed-file-recursive $backupdir $fdest [list file copy -force] [list file mkdir]] {
+		set todoStatus($pkgname:fixbackup) [list [mc "Problem recovering backups."]\n yellowbgm]
+	    }
 	}
     }
 
@@ -1865,6 +1904,11 @@ proc ::core::proceed-install {pkgname {depend no} {force no}} {
     }
     
     LOG [list "===>   " prefix [mc "Addon \""] blinkgreen $pkgname blinkgreen [mc "\" installed successfully\n"] blinkgreen]	
+    if $upgrade {
+	set todoStatus($pkgname:status) [list [mc "Upgraded."]\n greenbgm]
+    } else {
+	set todoStatus($pkgname:status) [list [mc "Installed."]\n greenbgm]
+    }
     return true
 }
 
@@ -1924,10 +1968,10 @@ proc ::core::install-extracted-files {allowrules denyrules sourcedir fh destdir}
 	}
     }
 
-    ::core::proceed-file-recursive $sourcedir/ $destdir/ \
-	[list ::core::tmp-checkfile $allowrules $denyrules $fh] \
-	[list ::core::tmp-checkDirPre] \
-	[list ::core::tmp-checkDirPost $fh]
+    return [::core::proceed-file-recursive $sourcedir/ $destdir/ \
+		[list ::core::tmp-checkfile $allowrules $denyrules $fh] \
+		[list ::core::tmp-checkDirPre] \
+		[list ::core::tmp-checkDirPost $fh]]
 }
 
 proc ::core::unpack {opts extrdir} {
