@@ -56,8 +56,8 @@ array set config {
     text:propvalue "-font {TkTextFont 12 normal} -lmargin1 2c -wrap word"
     text:propbold "-font {TkTextFont 12 bold} -lmargin1 2c -wrap word"
     text:descript "-font {TkTextFont 12 normal} -wrap word -lmargin1 1c -lmargin2 0c"
-    text:urlbold "-lmargin1 2c -font {TkTextFont 12} -underline on -background blue -foreground white -relief flat -borderwidth 1 -wrap word"
-    text:urlnormal "-lmargin1 2c -font {TkTextFont 12} -foreground blue -underline on -background {} -relief flat -wrap word"
+    text:urlbold "-font {TkTextFont 12} -underline on -background blue -foreground white -relief flat -borderwidth 1 -wrap word"
+    text:urlnormal " -font {TkTextFont 12} -foreground blue -underline on -background {} -relief flat -wrap word"
     text:normal "-font {TkTextFont 12} -wrap word"
     text:bold "-font {TkTextFont 10 bold} -wrap word"
     txtlog:normal "-font {TkTextFont 10} -wrap word"
@@ -545,6 +545,13 @@ proc ::uipkg::infoText-add-url {urltag urlname cmd} {
 proc ::uipkg::infoText-add-urledaddon-info {urltag urlname pkgname} {
     global pkgDB todo ::uipkg::infoText config
 
+    # check for addon not exist
+    if {![info exist pkgDB($pkgname:category)]} {
+	$::uipkg::infoText insert end $pkgname propvalue
+	return
+    }
+
+    $::uipkg::infoText insert end "" propvalue
     ::uipkg::infoText-add-url $urltag $pkgname "::uipkg::setTree-selection $::uipkg::pkgTree \
                                                  {[set node [lindex $pkgDB($pkgname:treenodes) 0]]}
                                                 ::uipkg::info-pkg-update-force"
