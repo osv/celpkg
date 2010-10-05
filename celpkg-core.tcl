@@ -562,7 +562,8 @@ proc read_index {fname quiet} {
     }
     variable dbvars "www conflicts distfile unpack maintainer author 
                 depend screenshot license patch backup copy renamework
-                choice options installmsg deinstallmsg install xpatch"
+                choice options installmsg deinstallmsg install xpatch
+                provide"
     if {[catch {set fh [open $fname "r"]} msg]} {
 	LOG [list "Fail to load index file: " blinkyellow $fname\n bold $msg\n bold]
 	return;
@@ -610,6 +611,7 @@ proc read_index {fname quiet} {
 	# remove comments
 	set line [lindex [split $line "#"] 0]
 	set param ""
+	# check for param (start from `$`)
 	regexp {^\s*\$(\w+)((\s+.*$)|(\s*$))} $line -> param line
 	# concat if no new param set
 	if {$param == ""} {
@@ -721,6 +723,10 @@ proc build-pkg-cache {} {
 		    for {set i 1} {$i < [llength $line]} {incr i} {
 			lappend pkgCache($name:depend) [lindex $line $i]
 		    }
+		} elseif {[lindex $line 0] eq "provide:"} {
+		    for {set i 1} {$i < [llength $line]} {incr i} {
+			lappend pkgCache($name:provide) [lindex $line $i]
+		    }
 		} elseif {[lindex $line 0] eq "version:"} {
 		    set pkgCache($name:version) [lindex $line 1]
 		} elseif {[lindex $line 0] eq "license:"} {
@@ -790,6 +796,10 @@ proc getNamedVar {args name} {
 # @commandFile - command for file for example [list file copy]
 # @commandPreDir, @commandPostDir - command for directory, before 
 # andafter recursive
+# Example:
+#   ::core::proceed-file-recursive celestia.cfg .
+#   ::core::proceed-file-recursive data/ .
+# return true if have some problems
 #-----------------------------
 proc ::core::proceed-file-recursive {sourcedir destdir {commandFile {}} {commandPreDir {}} {commandPostDir {}} } {
     # special case: $sourcedir is _not_ directory i.e not ended by "/", 
@@ -1633,6 +1643,9 @@ proc ::core::proceed-install {pkgname {depend no} {force no}} {
     if {[info exists pkgDB($pkgname:depend)]} {
 	puts $finfo "depend: $pkgDB($pkgname:depend)\n"
     }
+    if {[info exists pkgDB($pkgname:provide)]} {
+	puts $finfo "provide: $pkgDB($pkgname:provide)\n"
+    }
     if {[info exists pkgDB($pkgname:description)]} {
 	foreach descr $pkgDB($pkgname:description) {
 	    puts $finfo "description: \{$descr\}"
@@ -1838,23 +1851,7 @@ proc ::core::proceed-install {pkgname {depend no} {force no}} {
 	}
     }
 
-    # Checkout  all   installed  pkg's  depend   for  required_by  for
-    # curr. addon  auto fix depends by recovering  files from rbackups
-    # for addon that required this addon
-    foreach dep [array names pkgCache *:depend] {
-	#extract name of pkg
-	set depname [lindex [split $dep ":"] 0]
-	if {[lsearch -exact $pkgCache($depname:depend) $pkgname] >= 0} {
-	    ::core::add-to-required $pkgname $depname
-	    LOG [list "=> " prefix "Fix " normal \"$depname\" bold " that require " normal \"$pkgname\"\n bold ]
-	    LOG [list \n normal]
-	    set backupdir [file join $dbpath $depname "rbackup"]/
-	    set fdest $cpath
-	    if [::core::proceed-file-recursive $backupdir $fdest [list file copy -force] [list file mkdir]] {
-		set todoStatus($pkgname:fixbackup) [list [mc "Problem recovering backups."]\n yellowbgm]
-	    }
-	}
-    }
+    ::core::fix-required-addon $pkgname
 
     #TODO: add xpatch info to  separate file and xpatch remove command
     #in contents
@@ -1910,6 +1907,95 @@ proc ::core::proceed-install {pkgname {depend no} {force no}} {
 	set todoStatus($pkgname:status) [list [mc "Installed."]\n greenbgm]
     }
     return true
+}
+
+# Checkout all installed pkg's  depend for required_by for curr. addon
+# (@pkgname) auto  fix depend list,  backup newer installed  files and
+# recover files from rbackups/ of  addon that required this addon, its
+# more faster than reinstalling required_by addon!.
+#
+# Rexpatch, and  backup/recover backup for addon that  use provides of
+# this addon.
+proc ::core::fix-required-addon {pkgname} {
+    global cpath dbpath pkgCache pkgDB todoStatus
+    set fixed_addons {}
+
+    proc ::core::tmp-checkfile {fileSrc fileDest} {
+	# Copy newest file to backup/
+	# its hack - replace rbackup to backup in string to take,
+	# it must work because file tree of backup/ and rbackup/ are equal
+	set backupfileDest $fileSrc
+	if [regsub {rbackup} $backupfileDest backup backupfileDest] {
+	    file copy -force $fileDest $backupfileDest
+	    # Recover - Copy from rbackup
+	    file copy -force $fileSrc $fileDest
+	} ; # else somethink wrong, no match "rbackup"?
+    }
+
+    proc ::core::tmp-checkDirPre {dirName} {
+	file mkdir $dirName
+    }
+
+    foreach dep [array names pkgCache *:depend] {
+	#extract name of pkg
+	set depname [lindex [split $dep ":"] 0]
+	if [in $pkgCache($depname:depend) $pkgname] {
+	    # make sure addon is in required_by list
+	    ::core::add-to-required $pkgname $depname
+	    LOG [list "=> " prefix "Fix " normal \"$depname\" bold " that require " normal \"$pkgname\"\n bold ]
+	    set backupdir [file join $dbpath $depname "rbackup"]/
+	    set fdest $cpath
+	    if [::core::proceed-file-recursive $backupdir $fdest [list ::core::tmp-checkfile] \
+		    [list ::core::tmp-checkDirPre]] {
+		set todoStatus($pkgname:fixbackup) [list [mc "Problem recovering backups."]\n yellowbgm]
+	    }
+	    lappend fixed_addons $depname
+	    ::misc::sleep 1
+	}
+    }
+    ::misc::sleep 100
+    # Now fix provides for this addons. $provide is a list of files and
+    # we need recover from dir rbackup/ all this files, re xpatching this
+    if [info exist pkgDB($pkgname:provide)] {
+	if [llength $pkgDB($pkgname:provide)] {
+	    set addons_p [array names pkgCache *:category]
+	    foreach a $addons_p {
+		set fixpkg [lindex [split $a ":"] 0]
+		# rexpath addon if need
+		# TODO: rexpatch
+
+		# check rbackup for provide files
+		if [in $fixed_addons $fixpkg] {
+		    continue}
+		lappend fixed_addons $fixpkg
+
+		set backupdir [file join $dbpath $fixpkg "rbackup"]
+		foreach provide $pkgDB($pkgname:provide) {
+		    # recover existed $provide files from rbackup/ of installed addon
+		    if [file exist [file join $backupdir $provide]] {
+			LOG [list "=> " prefix "Fix " normal \"$fixpkg\" bold " that use provided resource " normal\
+				 $provide bold " of " normal \"$pkgname\"\n bold ]
+
+			set destdir [file join $cpath [file dirname $provide]]
+			set fsource [file join $backupdir $provide]
+			# if it is dir - append / to end of source name
+			if [file isdirectory $fsource] {
+			    set fsource $fsource/
+			    set destdir [file join $destdir [file tail $provide]]
+			}
+			file mkdir $destdir
+			# recover
+			if [::core::proceed-file-recursive $fsource $destdir [list ::core::tmp-checkfile] \
+				[list ::core::tmp-checkDirPre]] {
+			    set todoStatus($pkgname:fixbackup) [list [mc "Problem recovering backups."]\n yellowbgm]
+			}
+		    }
+
+		    ::misc::sleep 1
+		}
+	    }
+	}
+    }
 }
 
 #---------------
