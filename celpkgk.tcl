@@ -1091,8 +1091,8 @@ proc ::uipkg::info-pkg-update {args} {
         for {set i 0} {$i < [llength $pkgDB($pkgname:screenshot)]} {incr i} {
             $::uipkg::infoText insert end \n propvalue
             #make url
-            set urltag [lindex $pkgDB($pkgname:screenshot) $i]
-            set url [lindex $pkgDB($pkgname:screenshot) $i]
+            set urltag [lindex [lindex $pkgDB($pkgname:screenshot) $i] 0]
+            set url [lindex [lindex $pkgDB($pkgname:screenshot) $i] 0]
             ::uipkg::infoText-add-url $urltag [file tail $url] [list ::misc::browseurl $url]
         }
         $::uipkg::infoText insert end \n\n propvalue
@@ -1853,7 +1853,7 @@ setTooltip $searchEntry [mc "Search addon by given pattern
 You can use *, and ?, \[chars\] in pattern"]
 
 foreach f "name all category description version www conflicts distfile
-                unpack maintainer author 
+                unpack maintainer author provide
                 depend screenshot license patch backup copy
                 choice options installmsg deinstallmsg install
                 xpatch modified created" {
