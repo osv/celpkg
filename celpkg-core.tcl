@@ -587,7 +587,6 @@ proc read_index {fname quiet} {
 	global userDB 
 	variable dbvars
 
-
 	if {$param == "USER"} {
 	    check-brace $line $fname $lineNum
 	    foreach u $line {
@@ -633,9 +632,9 @@ proc read_index {fname quiet} {
 	    # seems new param
 	    if {$param == "addon"} {
 		set curAddon [lindex $line 0]
-		# clear oldaddon's info
-		foreach var "$dbvars installed version created modified description" {
-		    catch {unset pkgDB($curAddon:$var)}
+		# clear old addon's info except
+		foreach var [array names pkgDB $curAddon:*] {
+		    catch {unset pkgDB($var)}
 		}
 		set pkgDB($curAddon:installed) "no"
 		# for debug
@@ -668,6 +667,10 @@ proc read_index {fname quiet} {
 		lappend pkgDB($curAddon:description) $line
 	    } elseif {$param == "end"} { ; # $end -finish defining addon
 		set curAddon {};
+	    } else {
+		if {![in $dbvars $param] && $param != "USER"} {
+		    LOG [list "Warning: " yellowbgm "$fname:$lineNum: " normal "Unknown param: $param\n" red]
+		}
 	    }
 	}
     }
@@ -3101,6 +3104,8 @@ proc ::core::load-index-recursive {sourcedir quiet} {
     # Fix the directory name, this ensures the directory name is in the
     # native format for the platform and contains a final directory seperator
     set sourcedir [string trimright [file join [file normalize $sourcedir] { }]]
+
+    ::misc::sleep 1
 
     foreach f [lsort [glob -nocomplain -type {f l} [file join $sourcedir *.index]]] {
 	read_index $f $quiet
