@@ -666,6 +666,8 @@ proc read_index {fname quiet} {
 		set line [string trimleft $line {\t }]
 		set line [string trimright $line {\t }]
 		lappend pkgDB($curAddon:description) $line
+	    } elseif {$param == "end"} { ; # $end -finish defining addon
+		set curAddon {};
 	    }
 	}
     }
