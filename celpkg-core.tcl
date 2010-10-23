@@ -633,9 +633,15 @@ proc read_index {fname quiet} {
 	    if {$param == "addon"} {
 		set curAddon [lindex $line 0]
 		# clear old addon's info except
+		if [info exist pkgDB($curAddon:category)] {
+		    LOG [list "Warning: " bold "$fname:$lineNum: " normal " Redefining addon (old was found in " normal \
+			 "$pkgDB($curAddon:indexf):$pkgDB($curAddon:line):)\n" red]
+		}
+
 		foreach var [array names pkgDB $curAddon:*] {
 		    catch {unset pkgDB($var)}
 		}
+
 		set pkgDB($curAddon:installed) "no"
 		# for debug
 		set pkgDB($curAddon:line) $lineNum
