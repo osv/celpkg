@@ -1076,10 +1076,10 @@ proc ::uipkg::info-pkg-update {args} {
 
     set license {}
     if {[info exists pkgDB($pkgname:license)]} {
-	set license $pkgDB($pkgname:license)
+	set license [join $pkgDB($pkgname:license) \n]
     } else {
 	if {[info exists pkgCache($pkgname:license)]} {
-	    set license $pkgCache($pkgname:license)
+	    set license [join $pkgCache($pkgname:license) \n]
 	} else {
 	set license "unknown"}
     }
@@ -2123,7 +2123,7 @@ proc ::uipkg::export {} {
     set filename [ tk_getSaveFile -filetypes {{Archives {.tar.gz}}} \
                        -defaultextension .tar.gz \
                        -initialdir $importdir \
-                       -title [mc "Select archive for import"] ]
+                       -title [mc "Select archive for export"] ]
     # without extention
     set filename [regsub -all "(^.*)\\.tar\\.gz$" $filename "\\1"]
     if {$filename != ""} {
