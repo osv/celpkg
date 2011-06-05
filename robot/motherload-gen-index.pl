@@ -59,7 +59,7 @@ Usage: $0 [Options...]
  --printmenu       Show available menu
  --menu            Set menu for loading. (Default all menu)
 
-Run  this script with  --stage1 parameter.   It will  create .index.s1
+Run this  script with `--stage1' parameter.  It  will create .index.s1
 files. You must review all  files and comment unneeded DOWNLOAD before
 stage 2.
 
@@ -69,9 +69,11 @@ Stage 3  - download files into DISTFILES  dir (default work/distfiles)
 you  can change  it by  `--distfiles'  param. You  can download  files
 manually into $distfiles.
 
-Stage  4 -  examine archives  for  banned files  and create  \$install
-targer in  index. After that you  need final review  all .index.ok and
-rename it to .index
+Stage  4 -  examine archives  for banned  files and  created \$install
+targer in index.  After that you need final  review all .index.ok, put
+:DONE: or :IGNORE: in any place of index.ok.
+
+Final stage - run with `--done' to create .index files
 
 * Note: To disable ansi colors set ANSI_COLORS_DISABLED environment.
 
@@ -257,8 +259,13 @@ sub parseAddonHtml {
 
     mkpath "$workdir/$category";
 
+    my $f = "$workdir/$category/$addonname.index.s1";
+    if (skip_ok_file($f)) {
+	return;
+    }
+
     # create .index.s1 
-    open FILE, ">", "$workdir/$category/$addonname.index.s1" or {return print "$!, index src file not cteated"};
+    open FILE, ">", $f or {return print "$!, index src file not cteated"};
 
     print FILE "# -*-coding: utf-8; mode: tcl -*-\n";
     print FILE "# Created by robot $scriptname\n";
@@ -416,6 +423,34 @@ sub parseIndex {
     }
 }
 
+sub skip_ok_file {
+    my $f = $_[0];
+    if (-e $f ) {
+	open(DAT, $f) || die("Could not open file!"); 
+	my @dat=<DAT>;
+	close DAT;
+	my $skip = 0;
+	foreach my $d (@dat){
+	    if ($d =~m/:DONE:/) {
+		$skip = 1;
+		print color "bold green";
+		print "File finished, skip.\n";
+		print color "reset";
+		last; 
+	    } elsif ($d =~m/:IGNORE:/) {
+		$skip = 1;
+		print color "bold yellow";
+		print "File marked for ingore, skip.\n";
+		print color "reset";
+		last; 
+	    }
+	}
+	if ($skip) {
+	    return 1;
+	}
+    }
+    return 0;
+}
 
 if ($opt_cleans1) {
     `$FIND $indexdir -name "*.index.s1" -type f -print0 |xargs -0 rm`;
@@ -423,7 +458,13 @@ if ($opt_cleans1) {
 }
 
 if ($opt_cleanok) {
-    `$FIND $indexdir -name "*.index.ok" -type f -print0 |xargs -0 rm`;
+    my @files = `$FIND $indexdir -name "*.index.ok"`;
+    foreach $f (@files) {
+	chomp($f);
+	if (!skip_ok_file($f)) {
+	    unlink($f);
+	}
+    }
     exit;
 }
 
@@ -494,24 +535,9 @@ if ($opt_stage4) {
 	$f =~ s/index\.s1/index\.ok/;
 	print "==> $f\n";
 
-	# check if file is 
-	if (-e $f ) {
-	    open(DAT, $f) || die("Could not open file!"); 
-	    my @dat=<DAT>;
-	    close DAT;
-	    my $skip = 0;
-	    foreach my $d (@dat){
-		if ($d =~m/:DONE:/) {
-		    $skip = true;
-		    print color "bold green";
-		    print "File finished, skip.\n";
-		    print color "reset";
-		    last; 
-		}
-	    }
-	    if ($skip) {
-		next;
-	    }
+	# check if file is finished
+	if (skip_ok_file($f)) {
+	    next;
 	}
 
 	if (!open FILEOK, ">", $f) {
@@ -579,9 +605,9 @@ if ($opt_stage4) {
 
 	# check for banned files
 	if (-e "$arhcfilelist") {
-	    my $install = ();
+	    my %install = ();
+	    $res = `cat "$arhcfilelist"`;
 	    foreach $d (@banned_dir) {
-		$res = `cat "$arhcfilelist"`;
 		if ($res=~m/$d/) {
 		    if (!exists($install{$d})) {
 			$install{$d}="    {\"$d*\" -deny}";
@@ -592,7 +618,6 @@ if ($opt_stage4) {
 		}
 	    }
 	    foreach $f (@banned_files) {
-		$res = `cat "$arhcfilelist"`;
 		if ($res=~m/$f/) {
 		    if (!exists($install{$f})) {
 			$install{$f}="    {\"$f\" -skip}";
@@ -649,6 +674,7 @@ if ($opt_done) {
 
 		foreach my $d (@dat) {
 		    $d =~s/:DONE://g;
+		    $d =~s/:IGNORE://g;
 		    print FILE $d;
 		}
 		close FILE;
