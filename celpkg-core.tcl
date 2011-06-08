@@ -2190,8 +2190,20 @@ proc ::core::unpack {opts extrdir} {
     switch $packer {
 	zip { 
 	    if {[catch { exec unzip -o -d $dir $fname } results options]} {
-		LOG [list $results\n bold]
-		return 0
+		set details [dict get $options -errorcode]
+		if {[lindex $details 0] eq "CHILDSTATUS"} {
+		    set status [lindex $details 2]
+		    # status 1 is only warning
+		    # need check Windows wersion of unzip for error
+		    if {$status == 1} {
+			LOG [list "Warning: " yellowbgm $results\n\n normal]
+		    } else {
+			return 0
+		    }
+		} else {
+		    LOG [list $results\n bold]
+		    return 0
+		}
 	    }
 	}
 	tar {
