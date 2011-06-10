@@ -1107,7 +1107,7 @@ proc ::core::checksum {dist {dolog true}} {
     set name [getNamedVar $dist -name]
     set fname [file join $distpath $name]
     if {[file exists $fname]} {
-	if {$md5 != ""} {
+	if {$md5 != ""} {   
 	    if {[catch { set fmd5 [exec md5 -q $fname] } msg]} {
 		if {[catch { set fmd5 [lindex [exec md5sum $fname] 0] } msg]} {
 		    LOG [list $msg\n bold]
@@ -1115,15 +1115,19 @@ proc ::core::checksum {dist {dolog true}} {
 		    return false
 		}
 	    }
+	    if {$dolog} {
+		LOG [list "=> " prefix [mc "MD5 Checksum "] normal]
+	    }
+	    ::misc::sleep 50
 	    if {![string equal -nocase $md5 $fmd5]} {
 		if {$dolog} {
-		    LOG [list "=> " prefix [mc "MD5 Checksum "] normal [mc "mismatch"] blinkred \
+		    LOG [list [mc "mismatch"] blinkred \
 			     [mc " for "] normal $name.\n normal ]
 		}
 		return false
 	    } else {
 		if {$dolog} {
-		    LOG [list "=> " prefix [mc "MD5 Checksum OK for "] normal [file tail $name].\n normal ]
+		    LOG [list [mc "OK for "] normal [file tail $name].\n normal ]
 		}
 	    }
 	}
@@ -1137,15 +1141,19 @@ proc ::core::checksum {dist {dolog true}} {
 		    return false
 		}
 	    }    
+	    if {$dolog} {
+		LOG [list "=> " prefix [mc "SHA256 Checksum "] normal ]
+	    }
+	    ::misc::sleep 50
 	    if {![string equal -nocase $sha256 $fsha256]} {
 		if {$dolog} {
-		    LOG [list "=> " prefix [mc "SHA256 Checksum "] normal [mc "mismatch"] blinkred \
+		    LOG [list [mc "mismatch"] blinkred \
 			     [mc " for "] normal $name.\n normal ]
 		}
 		return false
 	    } else {
 		if {$dolog} {
-		    LOG [list "=> " prefix [mc "SHA256 Checksum OK for "] normal [file tail $name].\n normal ]
+		    LOG [list [mc "OK for "] normal [file tail $name].\n normal ]
 		}
 	    }
 	}
@@ -1159,15 +1167,19 @@ proc ::core::checksum {dist {dolog true}} {
 		    return false
 		}
 	    }
+	    if {$dolog} {
+		LOG [list "=> " prefix [mc "SHA1 Checksum "] normal [file tail $name].\n normal ]
+	    }
+	    ::misc::sleep 50
 	    if {![string equal -nocase $sha1 $fsha1]} {
 		if {$dolog} {
-		    LOG [list "=> " prefix [mc "SHA1 Checksum "] normal [mc "mismatch"] blinkred \
+		    LOG [list [mc "mismatch"] blinkred \
 			     [mc " for "] normal $name.\n normal ]
 		}
 		return false
 	    } else {
 		if {$dolog} {
-		    LOG [list "=> " prefix [mc "SHA1 Checksum OK for "] normal [file tail $name].\n normal ]
+		    LOG [list [mc "OK for "] normal [file tail $name].\n normal ]
 		}
 	    }
 	}
