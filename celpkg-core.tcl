@@ -577,8 +577,8 @@ proc read_index {fname quiet} {
 
     # check for brace match for text
     proc check-brace {text fname lineNum } {
-	if {[ catch {set temp [lindex $text 0]} ] } {
-	    puts stderr "$fname:$lineNum: Error when parsing index file, possible unmatched open brace"
+	if {[ catch {set temp [lindex $text 0]} msg ] } {
+	    puts stderr "$fname:$lineNum: Error when parsing index file, possible unmatched open brace: $msg"
 	    exit
 	}
     }
@@ -608,7 +608,9 @@ proc read_index {fname quiet} {
     while {[gets $fh line] >= 0} {
 	incr lineNum
 	# remove comments
-	set line [lindex [split $line "#"] 0]
+	if {[string index $line 0] == "#"} {
+	    set line ""
+	}
 	set param ""
 	# check for param (start from `$`)
 	regexp {^\s*\$(\w+)((\s+.*$)|(\s*$))} $line -> param line
