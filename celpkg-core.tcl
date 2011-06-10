@@ -752,6 +752,8 @@ proc build-pkg-cache {} {
 		} elseif {[lindex $line 0] eq "created:"} { 
 		    # date format YYYY-MM-DD
 		    set pkgCache($name:created) [lindex $line 1]
+		} elseif {[lindex $line 0] eq "xpatch:"} { 
+		    lappend pkgCache($name:xpatch) [lindex $line 1]
 		} elseif {[lindex $line 0] eq "description:"} { 
 		    lappend pkgCache($name:description) [lindex $line 1]
 		}		
@@ -1898,12 +1900,22 @@ proc ::core::proceed-install {pkgname {depend no} {force no}} {
     }
 
     puts $fid {}
+
     if [info exists pkgDB($pkgname:xpatch)] {
+
+	# save current xpatch for repatching when depended addon
+	# will be reinstalled, append info file
+	set finfo [open $infofile a]
+	fconfigure $finfo -encoding utf-8
+	puts $finfo {}
+	puts $finfo "# list if xpatches:"
+
 	file mkdir $extractdir
 	LOG [list "===>  " prefix [mc "Post install configuring for "] normal $pkgname\n bold ]
 	LOG [list \n normal]
 	foreach p $pkgDB($pkgname:xpatch) {
 	    if {[::core::check-options $pkgname $p]} {
+		puts $finfo "xpatch: {$p}"
 		set fname [getNamedVar $p -file]
 		LOG\r [list "xpatch \"$fname\"" download]
 		::misc::sleep 1
@@ -1913,12 +1925,9 @@ proc ::core::proceed-install {pkgname {depend no} {force no}} {
 		    set todoStatus($pkgname:xpatch) [list [mc "XPatch failed, addon may not work properly."]\n yellowbgm]
 		    # todo mark as broken
 		}
-
-		# save current xpatch for repatching when depended addon
-		# will be reinstalled
-		puts $fid "reXPatch: {$p}" 
 	    }
 	}
+	close $finfo
     }
 
     ::misc::sleep 100
@@ -2071,6 +2080,12 @@ proc ::core::fix-required-addon {pkgname} {
 		}
 	    }
 	    ::misc::sleep 1
+	}
+
+	if [info exist pkgCache($fixpkg:xpatch)] {
+	    foreach x $pkgCache($fixpkg:xpatch) {
+		# TODO: rexpatch
+	    }
 	}
     }
     
