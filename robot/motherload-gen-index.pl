@@ -174,7 +174,7 @@ sub uniq {
 # get uniq addon name
 sub getUniqName {
     my $addname = $_[0];
-    my $i = 1;
+    my $i = 2;
     my $workdir = "$indexdir/";
     my @sameadd = `$FIND \"$workdir\" -name \"$addname.index.s1\"`;
     if (scalar @sameadd) {
@@ -599,6 +599,8 @@ if ($opt_stage4) {
 	    } else {
 		$line =~s/&#38;/&/g;
 		$line =~s/&amp;/&/g;
+		$line =~s/<[\/]*[B]>/"/gi;
+		$line =~s/<[\/]*[I]>//gi;
 		print FILEOK "$line\n";
 	    }
 	}
@@ -646,6 +648,8 @@ if ($opt_stage4) {
 if ($opt_done) {
     print "===>  Search for :DONE: in .index.ok and copy to as .index\n";
     my @files = `$FIND $indexdir -name "*.index.ok"`;
+    my $num = 0;
+    my $all = 0;
     foreach my $f (@files) {
 	chomp($f);
 	my $addonname = basename($f, ".index.s1");
@@ -672,13 +676,17 @@ if ($opt_done) {
 		    print "$f $!\n";
 		}
 
+		# ignore tags
 		foreach my $d (@dat) {
 		    $d =~s/:DONE://g;
 		    $d =~s/:IGNORE://g;
 		    print FILE $d;
 		}
 		close FILE;
+		$num++;
 	    }
 	}
+	$all++
     }
+    print "Total: $num of $all\n";
 }
