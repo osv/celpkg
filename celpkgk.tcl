@@ -13,12 +13,12 @@ package require BWidget
 
 # root dir may contain some tcl packages
 set rootdir [file dirname [info script]]
+
 lappend auto_path $rootdir
 
 package require tablelist
 tablelist::addBWidgetComboBox
 tablelist::addBWidgetEntry
-package require md5
 
 namespace eval ::uicfg {}
 
@@ -1927,6 +1927,9 @@ pack [set installButton [button $fr.install -text [mc "Install"] -state disabled
          -offvalue "no" -onvalue "yes" -variable config(moreInfo)] \
     [button $fr.updateindex -text [mc "Update index file"] \
 	 -command ::core::update-index] \
+    [button $fr.updatecelpkg -text [mc "Update $prog_name"] \
+	 -command { $nb raise nb_log 
+	     ::core::update-celpkg $rootdir}] \
     -side left -fill x
 
 # tooltips
@@ -1937,6 +1940,7 @@ Run uninstall before any installs(upgrades)"]
 setTooltip $configButton [mc "Configure current addon"]
 setTooltip $fr.more [mc "Toggle more info visible of addon"]
 setTooltip $fr.updateindex [mc "Fetch index and refresh addon tree"]
+setTooltip $fr.updatecelpkg [mc "Update application"]
 
 # text
 pack [set sw [ScrolledWindow $rpane.info.sw]] -fill both -expand yes
@@ -2147,6 +2151,10 @@ proc _treepopup {item} {
 
     $m add command -accelerator {} -label [mc "Update index file"] \
         -compound left -command ::core::update-index
+    $m add command -accelerator {} -label [mc "Update application"] \
+        -compound left -command {
+	    $nb raise nb_log 
+	    ::core::update-celpkg $rootdir}
     $m add separator
 
     $m add command -accelerator i -label [mc "Toggle install"] -image $icon_install  -compound left -command ::uipkg::toggle-mark-for-install

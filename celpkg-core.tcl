@@ -8,6 +8,8 @@
 # of the License, or (at your option) any later version.
 
 package require msgcat
+package require md5
+
 namespace import msgcat::*
 
 if {[info exists ::env(LC_MESSAGES)]} {
@@ -46,6 +48,9 @@ variable dbcache
 
 # configfile
 variable mainConfigFile "~/.celpkg.cfg"
+
+# url for self update 
+variable celpkgUpdateUrl "http://github.com/osv/celpkg/zipball/master"
 
 # Array for all avail. addons
 variable pkgDB 
@@ -799,6 +804,7 @@ proc getNamedVar {args name} {
 	    return $val
 	}
     }
+    return ""
 }
 
 #-----------------------------------------------
@@ -933,7 +939,8 @@ proc ::core::proceed-uninstall {pkgname force} {
 	    if {$md5 != ""} { # if have md5 for file
 		if {[file exists $file]} {
 		    set fmd5 [::md5::md5 -hex -filename $file]
-		    if {$md5 == $fmd5} {
+		    if {[string equal -nocase $md5 $fmd5]} {
+			
 			LOG\r [list "rmfile \"$file\"" download]
 			catch {file delete $file}
 			lappend file_list $file
@@ -2972,7 +2979,7 @@ proc ::core::download {url {destdir {}}} {
     }
     file mkdir $destdir
     LOG [list "=> " prefix [mc "Attempting to fetch from "] normal $url\n normal]
-    set h1 [bgExec "wget -c --no-directories -P \"$destdir\"
+    set h1 [bgExec "wget -c --no-check-certificate --no-directories -P \"$destdir\"
                     \"$url\" --progress=dot:mega" ::core::download-logger pCount]
     # wait for finish
     vwait pCount
@@ -3166,6 +3173,110 @@ proc ::core::load-index-recursive {sourcedir quiet} {
     foreach dir [glob -nocomplain -type {d  r} -path $sourcedir *] {
 	::core::load-index-recursive $dir $quiet
     }
+}
+
+proc ::core::update-celpkg {rootdir} {
+    global GUI config distpath pkgpath celpkgUpdateUrl tcl_platform
+
+
+    # check for develop version is running, skip overvrite
+    # check for .git
+    if [file exist [file join $rootdir .git]] {
+	LOG [list "Development version is running, skip update\n" bold]
+	return;
+    }
+
+    set dwnPath [file join $rootdir .tmp]
+    # clean old
+    catch {file delete -force $tmpdir}
+    if {[catch {file mkdir $dwnPath} msg]} {
+	LOG [list "Temporary dir not created\n$msg\n" red]
+	return;
+    }
+
+    # download update index file
+    LOG [list "===>  " prefix [mc "Fetch update list"]\n normal]
+    ::core::download $celpkgUpdateUrl $dwnPath
+    ::misc::sleep 100
+    set updatelist {}
+
+    foreach file [glob -nocomplain -type {f} [file join $dwnPath *.zip]] {
+	LOG [list "===>  " prefix [mc "Read $file"]\n normal]
+
+	set fh [open "|unzip -p $file \"*.update\"" "r"]
+
+	while {[gets $fh line] >= 0} {
+	    # structure of line:
+	    # filename md5 options
+	    set filename [file join $rootdir [lindex $line 0]]
+	    set md5 [lindex $line 1]
+	    set options [lindex $line 2]
+
+	    set os [getNamedVar $options -os]
+
+	    if {(($os eq "win" || $os eq "windows") && ($tcl_platform(platform) != "windows"))} {
+	    	continue
+	    }
+
+	    if {(($os eq "unix" || $os eq "linux") && ($tcl_platform(platform) == "windows"))} {
+	    	continue
+	    }
+
+	    if [file exists $filename] {
+		set fmd5 [::md5::md5 -hex -filename $filename]
+		if {![string equal -nocase $md5 $fmd5]} {
+		    LOG [list "$filename\t" normal "is outdate\n" bold]
+		    lappend updatelist $line
+		} else {
+		    LOG [list "$filename\t" normal "up to date" green \n normal]
+		}
+	    } else {
+		LOG [list "$filename\t" normal "is outdate\n" bold]
+		lappend updatelist $line
+	    }
+	    ::misc::sleep 1
+	}  
+	close $fh
+    }
+
+    ::misc::sleep 250
+    LOG [list "===>  " prefix [mc "Download files"]\n normal]
+
+    # now download all need files
+    foreach {line} $updatelist {
+	set opt [lindex $line 2]
+
+	LOG [list "Download $filename\n" normal]
+	set url [getNamedVar $opt -url]
+
+	::core::download $url $dwnPath
+
+	# make sure file is downloaded
+	set filename [file join $dwnPath [file tail [lindex $line 0]]]
+	if [file exists $filename] {
+	    set fmd5 [lindex $line 1]
+	    if {![string equal -nocase $fmd5 [::md5::md5 -hex -filename $filename]]} {
+		LOG [list "MD5 Checksum mismatch for downloaded $filename\n" red]
+		return
+	    }
+	} else {
+	    LOG [list "File not downloaded: $filename\n" red]
+	    return
+	}
+    }
+
+    # now install update
+    ::misc::sleep 250
+    foreach {line} $updatelist {
+	set dstfile [file join $rootdir [lindex $line 0]]
+	set srcfile [file join $dwnPath [file tail [lindex $line 0]]]
+	catch {file mkdir [file dirname $dstfile]}
+	LOG [list $dstfile normal]
+	file copy -force  $srcfile $dstfile
+	LOG [list "\tok\n" green]
+	::misc::sleep 1
+    }
+    LOG [list "===>  " prefix [mc "Done"]\n normal]
 }
 
 proc ::core::load-index {{quiet no}} {
