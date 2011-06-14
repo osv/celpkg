@@ -3188,7 +3188,7 @@ proc ::core::update-celpkg {rootdir} {
 
     set dwnPath [file join $rootdir .tmp]
     # clean old
-    catch {file delete -force $tmpdir}
+    catch {file delete -force $dwnPath}
     if {[catch {file mkdir $dwnPath} msg]} {
 	LOG [list "Temporary dir not created\n$msg\n" red]
 	return;
@@ -3236,7 +3236,7 @@ proc ::core::update-celpkg {rootdir} {
 	    }
 	    ::misc::sleep 1
 	}  
-	close $fh
+	catch {close $fh}
     }
 
     ::misc::sleep 250
