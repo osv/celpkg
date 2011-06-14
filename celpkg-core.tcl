@@ -526,7 +526,8 @@ proc ::misc::start_target_program {} {
 #---------------
 # help func
 # Check line for first element as expression
-# and append pkgDB and expDB (expression db where each key is $addonname:"value for pkgDB")
+# and append pkgDB and expDB (expression db where each key is $addonname:$var:"value for pkgDB")
+# Example of expDB expDB("Foo addon:depend:Bar addon")
 #---------------
 proc appendDB {curAddon varname line } {
     global pkgDB expDB
@@ -543,7 +544,7 @@ proc appendDB {curAddon varname line } {
 		set curexpression [lindex [lindex $line 0] 1]
 		foreach var [lindex $line 1] {
 		    lappend pkgDB($curAddon:$varname) $var
-		    set expDB($curAddon:$var) $curexpression
+		    set expDB($curAddon:$varname:$var) $curexpression
 		}
 	    } 
 	    return
@@ -1085,15 +1086,13 @@ proc ::core::proceed-uninstall {pkgname force} {
 # and return result.
 # If no express. found return true
 #---------------
-proc ::core::check-options {pkgname variable} {
+proc ::core::check-options {pkgname varname variable} {
     global pkgDB expDB
     global celVerMajor celVerMinor env tcl_platform opt config
-
-    if {[info exists expDB($pkgname:$variable)]} {
-	if {($expDB($pkgname:$variable) eq "")} {return true}
+    if {[info exists expDB($pkgname:$varname:$variable)]} {
+	if {($expDB($pkgname:$varname:$variable) eq "")} {return true}
 	set res 0
-	# puts check_opt:$expDB($pkgname:$variable)
-	catch {eval "if {($expDB($pkgname:$variable))} {
+	catch {eval "if {($expDB($pkgname:$varname:$variable))} {
                           set res 1
                      } else {
                           set res 0
@@ -1542,7 +1541,7 @@ proc ::core::proceed-install {pkgname {depend no} {force no}} {
     set faillist ""
     if {[info exists pkgDB($pkgname:distfile)]} {
 	foreach dist $pkgDB($pkgname:distfile) {
-	    if {![::core::check-options $pkgname $dist]} {
+	    if {![::core::check-options $pkgname distfile $dist]} {
 		continue }
 	    set name [getNamedVar $dist -name]
 	    set fname [file join $distpath $name]
@@ -1581,7 +1580,7 @@ proc ::core::proceed-install {pkgname {depend no} {force no}} {
     set faildepend ""
     if {$depend && [info exists pkgDB($pkgname:depend)]} {
 	foreach dep $pkgDB($pkgname:depend) {
-	    if {![::core::check-options $pkgname $dep]} {
+	    if {![::core::check-options $pkgname depend $dep]} {
 		continue }
 	    # check for actual addon
 	    LOG [list "===>   " prefix $pkgname bold [mc " depends on package: "] normal \
@@ -1640,7 +1639,7 @@ proc ::core::proceed-install {pkgname {depend no} {force no}} {
     if [info exists pkgDB($pkgname:unpack)] {
 	LOG [list "===>  " prefix [mc "Extracting for "] normal $pkgname\n bold ]
 	foreach pack $pkgDB($pkgname:unpack) {
-	    if {![::core::check-options $pkgname $pack]} {
+	    if {![::core::check-options $pkgname unpack $pack]} {
 		continue }
 	    if {![::core::unpack $pack $extractdir]} {
 		LOG [list "===> " prefix [mc "Aborted installation of addon "] blinkred \
@@ -1658,7 +1657,7 @@ proc ::core::proceed-install {pkgname {depend no} {force no}} {
     if [info exist pkgDB($pkgname:renamework)] {
 	LOG [list "===>  " prefix [mc "Rename in work dir for "] normal $pkgname\n bold ]
 	foreach rename $pkgDB($pkgname:renamework) {
-	    if {![::core::check-options $pkgname $rename]} {
+	    if {![::core::check-options $pkgname renamework $rename]} {
 		continue }
 	    if {[llength $rename] == 0} {
 		continue }    
@@ -1679,7 +1678,7 @@ proc ::core::proceed-install {pkgname {depend no} {force no}} {
 	LOG [list "===>  " prefix [mc "Applying patches for "] normal $pkgname\n bold ]
 	::misc::sleep 200
 	foreach p $pkgDB($pkgname:patch) {
-	    if {[::core::check-options $pkgname $p]} {
+	    if {[::core::check-options $pkgname patch $p]} {
 		::misc::sleep 200
 		set filename [file nativename [file join $cpath $distpath $p]]
 		if {[catch {exec patch -s -p0 -d $extractdir -i $filename} msg]} {
@@ -1726,6 +1725,10 @@ proc ::core::proceed-install {pkgname {depend no} {force no}} {
 	puts $finfo "provide: $pkgDB($pkgname:provide)\n"
 	set pkgCache($pkgname:provide) $pkgDB($pkgname:provide)
     }
+    if {[info exists pkgDB($pkgname:require)]} {
+	puts $finfo "require: $pkgDB($pkgname:require)\n"
+	set pkgCache($pkgname:require) $pkgDB($pkgname:require)
+    }
     if {[info exists pkgDB($pkgname:description)]} {
 	foreach descr $pkgDB($pkgname:description) {
 	    puts $finfo "description: \{$descr\}"
@@ -1747,7 +1750,7 @@ proc ::core::proceed-install {pkgname {depend no} {force no}} {
 
 	# copy into backup dir of addon db folder from root dir
 	foreach f $pkgDB($pkgname:backup) {
-	    if {![::core::check-options $pkgname $f]} {
+	    if {![::core::check-options $pkgname backup $f]} {
 		continue }
 	    set backupdir [file join $dbdir "backup" [file dirname $f]]
 	    set fsource [file join $cpath $f]
@@ -1784,7 +1787,7 @@ proc ::core::proceed-install {pkgname {depend no} {force no}} {
 	# create file for backup filename list
 	set fbck [open [file join $dbdir "backup_info"] w]
 	foreach f $pkgDB($pkgname:backup) {
-	    if {![::core::check-options $pkgname $f]} {
+	    if {![::core::check-options $pkgname backup $f]} {
 		continue }
 	    set rbackupdir [file join $dbdir "rbackup" [file dirname $f]]
 	    set fsource [file join $extractdir $f]
@@ -1814,7 +1817,7 @@ proc ::core::proceed-install {pkgname {depend no} {force no}} {
     # copy files first if need
     if {[info exists pkgDB($pkgname:copy)]} {
 	foreach cop $pkgDB($pkgname:copy) {
-	    if {![::core::check-options $pkgname $cop]} {
+	    if {![::core::check-options $pkgname copy $cop]} {
 		continue }
 	    set fsource [lindex $cop 0]
 	    set fdest [lindex $cop 1]
@@ -1865,7 +1868,7 @@ proc ::core::proceed-install {pkgname {depend no} {force no}} {
     set denyrules {}
     if {[info exists pkgDB($pkgname:install)]} {
 	foreach rule $pkgDB($pkgname:install) {
-	    if {![::core::check-options $pkgname $rule]} {
+	    if {![::core::check-options $pkgname install $rule]} {
 		continue }		
 	    set pattern [lindex $rule 0]
 	    set allow 1
@@ -1921,7 +1924,7 @@ proc ::core::proceed-install {pkgname {depend no} {force no}} {
 	LOG [list "===>  " prefix [mc "Post install configuring for "] normal $pkgname\n bold ]
 	LOG [list \n normal]
 	foreach p $pkgDB($pkgname:xpatch) {
-	    if {[::core::check-options $pkgname $p]} {
+	    if {[::core::check-options $pkgname xpatch $p]} {
 		puts $finfo "xpatch: {$p}"
 		set fname [getNamedVar $p -file]
 		LOG\r [list "xpatch \"$fname\"" download]
@@ -1949,7 +1952,7 @@ proc ::core::proceed-install {pkgname {depend no} {force no}} {
     # when all depends installed fine set required_by these deps for this pkgname
     if {$depend && [info exists pkgDB($pkgname:depend)]} {
 	foreach dep $pkgDB($pkgname:depend) {
-	    if {![::core::check-options $pkgname $dep]} {
+	    if {![::core::check-options $pkgname depend $dep]} {
 		continue }
 	    ::core::add-to-required $dep $pkgname
 	}
@@ -1989,7 +1992,7 @@ proc ::core::proceed-install {pkgname {depend no} {force no}} {
     if {[info exists pkgDB($pkgname:installmsg)]} {
 	LOG [list [string repeat "*" 80]\n bold ]
 	foreach msg $pkgDB($pkgname:installmsg) {
-	    if {![::core::check-options $pkgname $msg]} {
+	    if {![::core::check-options $pkgname installmsg $msg]} {
 		continue }
 	    LOG [list "$msg\n" bold]
 	}
@@ -2000,7 +2003,7 @@ proc ::core::proceed-install {pkgname {depend no} {force no}} {
 	set fh [open [file normalize [file join $dbdir "msg-deinstall"]] w]
 	fconfigure $fh -encoding utf-8
 	foreach msg $pkgDB($pkgname:deinstallmsg) {
-	    if {![::core::check-options $pkgname $msg]} {
+	    if {![::core::check-options $pkgname deinstallmsg $msg]} {
 		continue }
 	    puts $fh $msg
 	}

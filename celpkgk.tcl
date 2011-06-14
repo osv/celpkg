@@ -457,7 +457,7 @@ proc ::uipkg::fix-pkgs {args} {
 
         if {[info exists pkgDB($pkgname:depend)]} {
             foreach dep $pkgDB($pkgname:depend) {
-                if {![::core::check-options $pkgname $dep]} {
+                if {![::core::check-options $pkgname depend $dep]} {
                     continue }
                 # mark to install not installed deps or 
                 if {[info exist pkgDB($dep:installed)]} {
@@ -506,7 +506,7 @@ proc ::uipkg::mark-compete-remove {} {
     
     if {[info exists pkgDB($pkgname:depend)]} {
         foreach depname $pkgDB($pkgname:depend) {
-            if {[::core::check-options $pkgname $depname]} {
+            if {[::core::check-options $pkgname depend $depname]} {
                 # no force
                 ::uipkg::add-to-uninstall $depname no
             }       
@@ -618,7 +618,7 @@ proc ::uipkg::infoText-add-described-addon { indx urltag pkgname } {
                 
                 # show configured info only for installed addons
                 if {[info exists pkgCache($pkgname:depend)]} {
-                    if {![::core::check-options $pkgname $depname]} {
+                    if {![::core::check-options $pkgname depend $depname]} {
                         $::uipkg::infoText insert end [mc " (Configured without this addon)"] propvalue
                     }
                 }
@@ -1117,7 +1117,7 @@ proc ::uipkg::info-pkg-update {args} {
                   set depname [lindex $deplist $i]
                   ::uipkg::infoText-add-urledaddon-info $urltag $depname $depname
                   # show configured info only for installed addons
-                  if {![::core::check-options $pkgname $depname] && [eval "set ${dependHash}(\$pkgname:installed)"]} {
+                  if {![::core::check-options $pkgname depend $depname] && [eval "set ${dependHash}(\$pkgname:installed)"]} {
                       $::uipkg::infoText insert end [mc " (Configured without this addon)"] propvalue
                   }
                   $::uipkg::infoText insert end \n propvalue
