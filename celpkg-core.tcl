@@ -569,7 +569,7 @@ proc read_index {fname quiet} {
     variable dbvars "www conflicts distfile unpack maintainer author 
                 depend screenshot license patch backup copy renamework
                 choice options installmsg deinstallmsg install xpatch
-                provide"
+                provide require"
     if {[catch {set fh [open $fname "r"]} msg]} {
 	LOG [list "Fail to load index file: " blinkyellow $fname\n bold $msg\n bold]
 	return;
@@ -745,6 +745,10 @@ proc build-pkg-cache {} {
 		} elseif {[lindex $line 0] eq "provide:"} {
 		    for {set i 1} {$i < [llength $line]} {incr i} {
 			lappend pkgCache($name:provide) [lindex $line $i]
+		    }
+		} elseif {[lindex $line 0] eq "require:"} {
+		    for {set i 1} {$i < [llength $line]} {incr i} {
+			lappend pkgCache($name:require) [lindex $line $i]
 		    }
 		} elseif {[lindex $line 0] eq "version:"} {
 		    set pkgCache($name:version) [lindex $line 1]
@@ -1279,6 +1283,27 @@ proc ::core::get-conflicted-addons {pkgname} {
 	    }
 	}
     }
+
+    # addons that use equal $backup
+    if [info exist pkgDB($pkgname:provide)] {
+	foreach c $pkgDB($pkgname:provide) {
+	    foreach confl [array names pkgDB *:provide] {
+		set name [lindex [split $confl :] 0]
+		if {$name == $pkgname } {
+		    continue }
+		foreach c2 $pkgDB($confl) {
+		    # glob backup dir
+		    if {[string match $c2* $c] ||
+			[string match $c* $c2]} {
+			lappend res $name
+			break
+		    }
+		}
+	    }
+	}
+    }
+
+
     # addons that use equal $copy
     if [info exist pkgDB($pkgname:copy)] {
 	foreach c $pkgDB($pkgname:copy) {
@@ -1628,6 +1653,81 @@ proc ::core::proceed-install {pkgname {depend no} {force no}} {
 	    ::core::update-options $pkgname
 	}
     }
+
+    # than resolve require
+    if {$depend && [info exists pkgDB($pkgname:require)]} {
+	foreach r $pkgDB($pkgname:require) {
+	    if {![::core::check-options $pkgname require $r]} {
+		continue
+	    }
+	    # check for actual addon
+	    LOG [list "===>   " prefix $pkgname bold [mc " depends on file: "] normal \
+		     $r bold " - " normal]
+	    ::misc::sleep 100
+
+	    # does provider of file installed?
+	    set needinstall 1
+	    foreach pkg [array names pkgCache *:provide] {
+		if [in $pkgCache($pkg) $r] {
+		    LOG [list [mc "found\n" ] bold]
+		    set needinstall 0
+		    break
+		}
+	    }
+
+	    # need install some provider
+	    if {$needinstall} {
+		LOG [list [mc "not found\n" ] bold]
+		# first find best provider based on creation time of addon
+		set providerpkg_name ""
+		set providerpkg_create ""
+		foreach pkg [array names pkgDB *:provide] {
+		    if [in $pkgDB($pkg) $r] {
+			set name [lindex [split $pkg :] 0]
+			if {[::misc::cmpversion $pkgDB($name:created) $providerpkg_create] == "g"} {
+			    set providerpkg_name $name
+			    set providerpkg_create $pkgDB($name:created)
+			}
+		    }
+		}
+		if {$providerpkg_name == ""} {
+		    LOG [list "=> " prefix [mc "Provider not declared, you may try update index and retry\n"] normal]
+		    LOG [list "===> " prefix [mc "Aborted installation of addon "] blinkred \
+			     $pkgname\n blinkred ]
+		    set todoStatus($pkgname:status) [list [mc "Aborted, provider of file not declared."]\n redbgm]
+		    ::misc::sleep 200
+		    return false
+		} else {
+		    # install
+		    ::misc::sleep 100
+		    if {![::core::proceed-install $providerpkg_name yes]} {
+			# fail to install depend, save problem pkg name
+			set faildepend $providerpkg_name
+		    }
+		    LOG [list "===>   " prefix [mc "Returning to install of "] greenbg \
+			     $pkgname\n greenbgbold ]
+		    ::misc::sleep 200
+		    if {($faildepend != "") && !$force} {
+			LOG [list "=> " prefix [mc "Dependence not installed:\n"] normal $faildepend\n table]
+			LOG [list "===> " prefix [mc "Aborted installation of addon "] blinkred \
+				 $pkgname\n blinkred ]
+			set todoStatus($pkgname:status) [list [mc "Aborted, dependence not installed."]\n redbgm]
+			::misc::sleep 200
+			return false
+		    }
+	    
+		    ::misc::sleep 200
+		    # get opts again
+		    ::core::update-options $pkgname
+		}
+	    }
+	    
+	}
+    }
+
+
+
+
 
     # Install
 
