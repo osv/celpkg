@@ -467,6 +467,44 @@ proc ::uipkg::fix-pkgs {args} {
                 }
             }
         }
+	# now based on $provide dependencies
+	if [info exist pkgDB($pkgname:require)] {
+	    foreach r $pkgDB($pkgname:require) {
+		if {![::core::check-options $pkgname require $r]} {
+		    continue
+		}
+
+		set needinstall 1
+		foreach pkg [array names pkgCache *:provide] {
+		    if [in $pkgCache($pkg) $r] {
+			set needinstall 0
+			break
+		    }
+		}
+
+		if {$needinstall} {
+		    set providerpkg_name ""
+		    set providerpkg_create ""
+		    foreach pkg [array names pkgDB *:provide] {
+			if [in $pkgDB($pkg) $r] {
+			    set name [lindex [split $pkg :] 0]
+			    if {[::misc::cmpversion $pkgDB($name:created) $providerpkg_create] == "g"} {
+				set providerpkg_name $name
+				set providerpkg_create $pkgDB($name:created)
+			    }
+			}
+		    }
+		    if {$providerpkg_name != ""} {
+			# mark to install not installed deps or 
+			if {[info exist pkgDB($providerpkg_name:installed)]} {
+			    if {!$pkgDB($providerpkg_name:installed)} {
+				::uipkg::add-to-install $providerpkg_name
+			    }
+			}
+		    }
+		}
+	    }
+	}
     }
 }
 
