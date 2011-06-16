@@ -1127,8 +1127,13 @@ proc ::core::checksum {dist {dolog true}} {
     set sha1 [getNamedVar $dist -sha1]
     set name [getNamedVar $dist -name]
     set fname [file join $distpath $name]
+    ::misc::sleep 50
     if {[file exists $fname]} {
 	if {$md5 != ""} {   
+	    if {$dolog} {
+		LOG [list "=> " prefix [mc "MD5 Checksum "] normal]
+	    }
+	    ::misc::sleep 50
 	    if {[catch { set fmd5 [exec md5 -q $fname] } msg]} {
 		if {[catch { set fmd5 [lindex [exec md5sum $fname] 0] } msg]} {
 		    LOG [list $msg\n bold]
@@ -1136,10 +1141,6 @@ proc ::core::checksum {dist {dolog true}} {
 		    return false
 		}
 	    }
-	    if {$dolog} {
-		LOG [list "=> " prefix [mc "MD5 Checksum "] normal]
-	    }
-	    ::misc::sleep 50
 	    if {![string equal -nocase $md5 $fmd5]} {
 		if {$dolog} {
 		    LOG [list [mc "mismatch"] blinkred \
@@ -1155,6 +1156,10 @@ proc ::core::checksum {dist {dolog true}} {
 	::misc::sleep 100
 
 	if {$sha256 != ""} {
+	    if {$dolog} {
+		LOG [list "=> " prefix [mc "SHA256 Checksum "] normal ]
+	    }
+	    ::misc::sleep 50
 	    if {[catch { set fsha256 [exec sha256 -q $fname] } msg]} {
 		if {[catch { set fsha256 [lindex [exec sha256sum $fname] 0] } msg]} {
 		    LOG [list $msg\n bold]
@@ -1162,10 +1167,6 @@ proc ::core::checksum {dist {dolog true}} {
 		    return false
 		}
 	    }    
-	    if {$dolog} {
-		LOG [list "=> " prefix [mc "SHA256 Checksum "] normal ]
-	    }
-	    ::misc::sleep 50
 	    if {![string equal -nocase $sha256 $fsha256]} {
 		if {$dolog} {
 		    LOG [list [mc "mismatch"] blinkred \
@@ -1181,6 +1182,10 @@ proc ::core::checksum {dist {dolog true}} {
 
 	::misc::sleep 100
 	if {$sha1 != ""} {
+	    if {$dolog} {
+		LOG [list "=> " prefix [mc "SHA1 Checksum "] normal ]
+	    }
+	    ::misc::sleep 50
 	    if {[catch { set fsha1 [exec sha1 -q $fname] } msg]} {
 		if {[catch { set fsha1 [lindex [exec sha1sum $fname] 0] } msg]} {
 		    LOG [list $msg\n bold]
@@ -1188,10 +1193,6 @@ proc ::core::checksum {dist {dolog true}} {
 		    return false
 		}
 	    }
-	    if {$dolog} {
-		LOG [list "=> " prefix [mc "SHA1 Checksum "] normal [file tail $name].\n normal ]
-	    }
-	    ::misc::sleep 50
 	    if {![string equal -nocase $sha1 $fsha1]} {
 		if {$dolog} {
 		    LOG [list [mc "mismatch"] blinkred \
@@ -2333,6 +2334,7 @@ proc ::core::unpack {opts extrdir} {
 
     file mkdir $dir
     LOG [list $fname\n download]
+    ::misc::sleep 1
     switch $packer {
 	zip { 
 	    if {[catch { exec unzip -o -d $dir $fname } results options]} {
