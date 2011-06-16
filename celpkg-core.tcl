@@ -612,6 +612,13 @@ proc read_index {fname quiet} {
     set curParam {}
     set pline {}
     while {[gets $fh line] >= 0} {
+	# $end -finish defining addon
+	if {[regexp {^\s*\$end((\s+.*$)|(\s*$))} $line -> param]} {
+	    set curAddon {}
+	    puts $param
+	    set line $param
+	}
+
 	incr lineNum
 	# remove comments
 	if {[string index $line 0] == "#"} {
@@ -646,9 +653,11 @@ proc read_index {fname quiet} {
 			 "$pkgDB($curAddon:indexf):$pkgDB($curAddon:line):)\n" red]
 		}
 
-		foreach var [array names pkgDB $curAddon:*] {
-		    catch {unset pkgDB($var)}
+		foreach var $dbvars {
+		    catch {unset pkgDB($curAddon:$var)}
 		}
+
+		catch  {unset pkgDB($curAddon:description)}
 
 		set pkgDB($curAddon:installed) "no"
 		# for debug
@@ -679,8 +688,6 @@ proc read_index {fname quiet} {
 		set line [string trimleft $line {\t }]
 		set line [string trimright $line {\t }]
 		lappend pkgDB($curAddon:description) $line
-	    } elseif {$param == "end"} { ; # $end -finish defining addon
-		set curAddon {};
 	    } else {
 		if {![in $dbvars $param] && $param != "USER"} {
 		    LOG [list "Warning: " yellowbgm "$fname:$lineNum: " normal "Unknown param: $param\n" red]
