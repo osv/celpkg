@@ -563,6 +563,8 @@ proc appendDB {curAddon varname line } {
 proc read_index {fname quiet} {
     global pkgDB
     global GUI
+
+    set news ""
     if $GUI {
 	global ::uipkg::pkgTree ::uipkg::infoText
     }
@@ -633,6 +635,10 @@ proc read_index {fname quiet} {
 		if {$curParam == "description"} {
 		    set line [string trimleft $line { }]
 		    lappend pkgDB($curAddon:description) $line
+		} elseif {$curParam == "news"} {
+		    set line [string trimleft $line {\t }]
+		    set line [string trimright $line {\t }]
+		    lappend news $line
 		} else {
 		    set pline "$pline $line" 
 		}
@@ -688,6 +694,10 @@ proc read_index {fname quiet} {
 		set line [string trimleft $line {\t }]
 		set line [string trimright $line {\t }]
 		lappend pkgDB($curAddon:description) $line
+	    } elseif {$param == "news"} {
+		set line [string trimleft $line {\t }]
+		set line [string trimright $line {\t }]
+		lappend news $line
 	    } else {
 		if {![in $dbvars $param] && $param != "USER"} {
 		    LOG [list "Warning: " yellowbgm "$fname:$lineNum: " normal "Unknown param: $param\n" red]
@@ -698,6 +708,12 @@ proc read_index {fname quiet} {
     add-param-to-db $curAddon $curParam $pline $fname $lineNum
 
     close $fh
+
+    if {$news != ""} {
+	foreach n $news {
+	    LOG [list $n\n bold]
+	}
+    }
 }
 
 #-----------------------------------------------
