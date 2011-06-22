@@ -1,3 +1,3 @@
-celpkg-core.tcl e5c6e6749d7c73a399a3b9f308870517	{-url https://github.com/osv/celpkg/raw/8fd0e5f8a83578968d303a59f987ce3dc0732f66/celpkg-core.tcl}
-celpkgk.tcl	8c89e1af27af75d24f68d2d0665e52b6	{-url https://github.com/osv/celpkg/raw/8fd0e5f8a83578968d303a59f987ce3dc0732f66/celpkgk.tcl}
-celpkg.tcl	8e035222c4c9b3df5e15827eb5fc83c6	{-url https://github.com/osv/celpkg/raw/8fd0e5f8a83578968d303a59f987ce3dc0732f66/celpkg.tcl}
+celpkg-core.tcl 8f492940bc95f3e731719ec42de70ac8	{-url https://github.com/osv/celpkg/raw/1b2139831af506114238641f15e46ba8daac0c50/celpkg-core.tcl}
+celpkgk.tcl	0027e6eb29b22d271eef9d9de0242a9c	{-url https://github.com/osv/celpkg/raw/1b2139831af506114238641f15e46ba8daac0c50/celpkgk.tcl}
+celpkg.tcl	8e035222c4c9b3df5e15827eb5fc83c6	{-url https://github.com/osv/celpkg/raw/1b2139831af506114238641f15e46ba8daac0c50/celpkg.tcl}
