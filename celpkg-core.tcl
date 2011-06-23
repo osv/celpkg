@@ -1036,14 +1036,13 @@ proc ::core::proceed-uninstall {pkgname force} {
 		set backupdir [file join $dbpath $fixpkg "backup"]
 		foreach provide $pkgCache($pkgname:provide) {
 		    if [file exist [file join $backupdir $provide]] {
-			LOG [list "==> " prefix "Remove backuped files of " normal \"$fixpkg\" bold " package that use some provided resource of " \
-				 normal \"$pkgname\"\n bold ]
+			LOG [list "==> " prefix "Remove backuped files of " normal \"$fixpkg\" bold " package that use some provided resource of this pkg\n" normal ]
 
 			# now remove all matched files
 			foreach f $flist {
 			    set testfile [file join $backupdir $f]
 			    if [file exist $testfile] {
-				puts "delete from backup: $testfile"
+				LOG\r [list "delete from backup: $testfile" download]
 				catch {file delete $testfile}
 				catch {file delete [file dirname $testfile]}
 			    }
@@ -2192,6 +2191,8 @@ proc ::core::fix-required-addon {pkgname} {
 	}
 	close $fbck
 
+	LOG [list \n normal]
+
 	foreach f $backup_list {
 	    # installed file must exist in backup file list
 	    if {![in $filelist $f]} {
@@ -2202,15 +2203,15 @@ proc ::core::fix-required-addon {pkgname} {
 	    set forbackup [file join $backupdir $f]
 	    file mkdir [file dirname $forbackup]
 	    if [catch {file copy -force $newerfile $forbackup} msg] {
-		LOG\n [list $msg red]
+		LOG [list $msg\n\n red]
 	    }
 
 	    set fromrecover [file join $rbackupdir $f]
 	    if [file exist $fromrecover] {
-		puts "recover: $f"
+		LOG\r [list "recover $fromrecover" download]
 
 		if [catch {file copy -force $fromrecover $newerfile} msg] {
-		    LOG\n [list $msg red]
+		    LOG [list $msg\n\n red]
 		}
 	    }
 	    ::misc::sleep 1
@@ -2349,7 +2350,7 @@ proc ::core::unpack {opts extrdir} {
     set dir [ file normalize [file join $extrdir $dir]]
 
     file mkdir $dir
-    LOG [list $fname\n download]
+    LOG [list "$packer $fname\n" download]
     ::misc::sleep 1
     switch $packer {
 	zip { 
