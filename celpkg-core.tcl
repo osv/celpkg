@@ -1007,8 +1007,8 @@ proc ::core::proceed-uninstall {pkgname force} {
     }
     # delete backup and rbackup dir
     catch {file delete -force [file join $dbdir "backup"]}
-    catch {file delete -force [file join $dbdir "rbackup"]}
-    if {[catch {file delete "backup_info"} msg] } {
+    catch {file delete -force [file join $sdbdir "rbackup"]}
+    if {[catch {file delete [file join $dbdir "backup_info"]} msg] } {
 	LOG [list [mc "Can't delete backup info file:\n"] bold $msg\n red]
 	set todoStatus($pkgname:status) [list [mc "Failed."]\n redbgm]
 	return false
