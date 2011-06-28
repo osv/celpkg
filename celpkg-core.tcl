@@ -1514,6 +1514,7 @@ proc ::core::update-options { pkgname } {
 		     [info exists pkgDB($pkgname:choice)])} {
 	if $GUI {
 	    ::uipkg::configure-pkg $pkgname
+	    ::core::update-options $pkgname
 	} else {
 	    puts "No configuration for package \"$pkgname\" found, use default."
 
