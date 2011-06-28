@@ -785,8 +785,6 @@ proc build-pkg-cache {} {
 		} elseif {[lindex $line 0] eq "created:"} { 
 		    # date format YYYY-MM-DD
 		    set pkgCache($name:created) [lindex $line 1]
-		} elseif {[lindex $line 0] eq "xpatch:"} { 
-		    lappend pkgCache($name:xpatch) [lindex $line 1]
 		} elseif {[lindex $line 0] eq "description:"} { 
 		    lappend pkgCache($name:description) [lindex $line 1]
 		}		
@@ -2048,7 +2046,6 @@ proc ::core::proceed-install {pkgname {depend no} {force no}} {
 	LOG [list \n normal]
 	foreach p $pkgDB($pkgname:xpatch) {
 	    if {[::core::check-options $pkgname xpatch $p]} {
-		puts $finfo "xpatch: {$p}"
 		set fname [getNamedVar $p -file]
 		LOG\r [list "xpatch \"$fname\"" download]
 		::misc::sleep 1
