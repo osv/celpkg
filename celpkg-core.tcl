@@ -1749,10 +1749,6 @@ proc ::core::proceed-install {pkgname {depend no} {force no}} {
 	}
     }
 
-
-
-
-
     # Install
 
     # extract dir is $workdir/$pkgname/work/
@@ -2037,6 +2033,9 @@ proc ::core::proceed-install {pkgname {depend no} {force no}} {
 
     if [info exists pkgDB($pkgname:xpatch)] {
 
+	set fxpath [open [file normalize [file join $dbdir "xpatch"]] w]
+	fconfigure $fid -encoding utf-8
+
 	# save current xpatch for repatching when depended addon
 	# will be reinstalled, append info file
 	set finfo [open $infofile a]
@@ -2059,8 +2058,10 @@ proc ::core::proceed-install {pkgname {depend no} {force no}} {
 		    set todoStatus($pkgname:xpatch) [list [mc "XPatch failed, addon may not work properly."]\n yellowbgm]
 		    # todo mark as broken
 		}
+		puts $fxpath $p
 	    }
 	}
+	close $fxpath
 	close $finfo
     }
 
@@ -2086,9 +2087,6 @@ proc ::core::proceed-install {pkgname {depend no} {force no}} {
 
     ::core::fix-required-addon $pkgname
 
-    #TODO: add xpatch info to  separate file and xpatch remove command
-    #in contents
-    
     # TODO: check installed addons  that have problem during inst. i.e
     # not ending by "installed."
     set fid [open $contentfile a]
@@ -2174,54 +2172,73 @@ proc ::core::fix-required-addon {pkgname} {
     # Update newer file to backup/ and recover from rbackup.
     # @filelist - list of installed files
     proc ::core::fix-backup {fixpkg filelist} {
-	global dbpath cpath
-
-	set backup_info [file join $dbpath $fixpkg "backup_info"]
-	# if no file backup_info, no need any backups
-	if {![file exist $backup_info]} {
-	    return
-	}
-	set backupdir [file join $dbpath $fixpkg "backup"]
-	set rbackupdir [file join $dbpath $fixpkg "rbackup"]
-	
-	# load backup file list for this pkg
-	set fbck [open $backup_info r]
-	set backup_list {}
-	while {[gets $fbck line] >= 0} {
-	    lappend backup_list $line
-	}
-	close $fbck
+	global dbpath cpath workdir
 
 	LOG [list \n normal]
 
-	foreach f $backup_list {
-	    # installed file must exist in backup file list
-	    if {![in $filelist $f]} {
-		continue
-	    }
-	    set newerfile [file join $cpath $f]
-	    # update newer file to backup/
-	    set forbackup [file join $backupdir $f]
-	    file mkdir [file dirname $forbackup]
-	    if [catch {file copy -force $newerfile $forbackup} msg] {
-		LOG [list $msg\n\n red]
-	    }
+	set backup_info [file join $dbpath $fixpkg "backup_info"]
+	# backup
+	if {[file exist $backup_info]} {
 
-	    set fromrecover [file join $rbackupdir $f]
-	    if [file exist $fromrecover] {
-		LOG\r [list "recover $fromrecover" download]
+	    set backupdir [file join $dbpath $fixpkg "backup"]
+	    set rbackupdir [file join $dbpath $fixpkg "rbackup"]
+	    
+	    # load backup file list for this pkg
+	    set fbck [open $backup_info r]
+	    set backup_list {}
+	    while {[gets $fbck line] >= 0} {
+		lappend backup_list $line
+	    }
+	    close $fbck
 
-		if [catch {file copy -force $fromrecover $newerfile} msg] {
+	    foreach f $backup_list {
+		# installed file must exist in backup file list
+		if {![in $filelist $f]} {
+		    continue
+		}
+		set newerfile [file join $cpath $f]
+		# update newer file to backup/
+		set forbackup [file join $backupdir $f]
+		file mkdir [file dirname $forbackup]
+		if [catch {file copy -force $newerfile $forbackup} msg] {
 		    LOG [list $msg\n\n red]
 		}
-	    }
-	    ::misc::sleep 1
-	}
 
-	if [info exist pkgCache($fixpkg:xpatch)] {
-	    foreach x $pkgCache($fixpkg:xpatch) {
-		# TODO: rexpatch
+		set fromrecover [file join $rbackupdir $f]
+		if [file exist $fromrecover] {
+		    LOG\r [list "recover $fromrecover" download]
+
+		    if [catch {file copy -force $fromrecover $newerfile} msg] {
+			LOG [list $msg\n\n red]
+		    }
+		}
+		::misc::sleep 1
 	    }
+	} ;# fix backup
+
+	# need re-xpatch?
+	set xpatchname [file join $dbpath $fixpkg "xpatch"]
+	if [file exist $xpatchname] {
+	    set tempdir [file join [file join $workdir $fixpkg] tmp]
+	    file mkdir $tempdir
+
+	    set fxpatch [open $xpatchname r]
+	    while {![eof $fxpatch]} {
+		set line [gets $fxpatch]
+		set f [getNamedVar $line -file]
+		if {[in $filelist $f]} {
+		    LOG\r [list "rexpatch \"$f\"" download]
+		    if {![::core::apply-xpatch $line $tempdir]} {
+			LOG [list "===> " prefix [mc "Addon may not work"]\n\n blinkred \
+				]
+			set todoStatus($fixpkg:xpatch) [list [mc "XPatch failed, addon may not work properly."]\n yellowbgm]
+		    }
+		}
+		::misc::sleep 1
+	    }
+	    close $fxpatch
+	    # clear tmp
+	    file delete -force $tempdir
 	}
     }
     
@@ -2250,8 +2267,6 @@ proc ::core::fix-required-addon {pkgname} {
 	    set addons_p [array names pkgCache *:category]
 	    foreach a $addons_p {
 		set fixpkg [lindex [split $a ":"] 0]
-		# rexpath addon if need
-		# TODO: rexpatch
 
 		# check rbackup for provide files
 		# firt make sure this addon not fixed yet
@@ -2259,14 +2274,26 @@ proc ::core::fix-required-addon {pkgname} {
 		    continue}
 		lappend fixed_addons $fixpkg
 
+		set need_fix no
+
 		foreach provide $pkgDB($pkgname:provide) {
 		    # recover existed $provide files from rbackup/ of installed addon
-		    if [file exist [file join $dbpath $fixpkg "rbackup" $provide]] {
+		    # or re xpath if exist
+		    if {[file exist [file join $dbpath $fixpkg "rbackup" $provide]]} {
 			LOG [list "==> " prefix "Fix " normal \"$fixpkg\" bold " package that use some provided resource of " \
 				 normal \"$pkgname\"\n bold ]
-			
-			::core::fix-backup $fixpkg $filelist
+			set need_fix yes
 		    }
+		}
+
+		if [file exist [file join $dbpath $fixpkg "xpatch" ]] {
+		    set need_fix yes
+		}
+
+		if $need_fix {
+		    LOG [list "==> " prefix "Fix " normal \"$fixpkg\" bold " package that (may) use some provided resource of " \
+			     normal \"$pkgname\"\n bold ]
+		    ::core::fix-backup $fixpkg $filelist
 		}
 	    }
 	}
