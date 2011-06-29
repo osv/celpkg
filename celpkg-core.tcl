@@ -3359,6 +3359,7 @@ proc ::core::update-celpkg {rootdir} {
     set updatelist {}
 
     foreach file [glob -nocomplain -type {f} [file join $dwnPath *.zip]] {
+	set file [file nativename $file]
 	LOG [list "===>  " prefix [mc "Read $file"]\n normal]
 
 	set fh [open "|unzip -p $file \"*.update\"" "r"]
@@ -3366,7 +3367,7 @@ proc ::core::update-celpkg {rootdir} {
 	while {[gets $fh line] >= 0} {
 	    # structure of line:
 	    # filename md5 options
-	    set filename [file join $rootdir [lindex $line 0]]
+	    set filename [file nativename [file join $rootdir [lindex $line 0]]]
 	    set md5 [lindex $line 1]
 	    set options [lindex $line 2]
 
@@ -3398,28 +3399,31 @@ proc ::core::update-celpkg {rootdir} {
     }
 
     ::misc::sleep 250
-    LOG [list "===>  " prefix [mc "Download files"]\n normal]
 
-    # now download all need files
-    foreach {line} $updatelist {
-	set opt [lindex $line 2]
+    if {$updatelist != {}} {
+	LOG [list "===>  " prefix [mc "Download files"]\n normal]
 
-	LOG [list "Download $filename\n" normal]
-	set url [getNamedVar $opt -url]
+	# now download all need files
+	foreach {line} $updatelist {
+	    set opt [lindex $line 2]
 
-	::core::download $url $dwnPath
+	    LOG [list "Download $filename\n" normal]
+	    set url [getNamedVar $opt -url]
 
-	# make sure file is downloaded
-	set filename [file join $dwnPath [file tail [lindex $line 0]]]
-	if [file exists $filename] {
-	    set fmd5 [lindex $line 1]
-	    if {![string equal -nocase $fmd5 [::md5::md5 -hex -filename $filename]]} {
-		LOG [list "MD5 Checksum mismatch for downloaded $filename\n" red]
+	    ::core::download $url $dwnPath
+
+	    # make sure file is downloaded
+	    set filename [file join $dwnPath [file tail [lindex $line 0]]]
+	    if [file exists $filename] {
+		set fmd5 [lindex $line 1]
+		if {![string equal -nocase $fmd5 [::md5::md5 -hex -filename $filename]]} {
+		    LOG [list "MD5 Checksum mismatch for downloaded $filename\n" red]
+		    return
+		}
+	    } else {
+		LOG [list "File not downloaded: $filename\n" red]
 		return
 	    }
-	} else {
-	    LOG [list "File not downloaded: $filename\n" red]
-	    return
 	}
     }
 
