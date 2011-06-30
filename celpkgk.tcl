@@ -44,38 +44,54 @@ if {$tcl_platform(platform) == "windows"} {
 }
 
 # Some GUI config vars (before loading celpkg-core.tcl)
+option add *Tree.install darkgreen widgetDefault
+option add *Tree.uninstall darkred widgetDefault
+option add *Tree.normal black widgetDefault
+option add *Tree.installed darkblue widgetDefault
+option add *Text.tittle "-font {TkTextFont 20 bold} -justify center" widgetDefault
+option add *Text.category "-justify right -font {TkTextFont 10}" widgetDefault
+option add *Text.propname "-font {TkTextFont 12 bold}" widgetDefault
+option add *Text.propvalue "-font {TkTextFont 12 normal} -lmargin1 2c" widgetDefault
+option add *Text.propbold "-font {TkTextFont 12 bold} -lmargin1 2c" widgetDefault
+option add *Text.descript "-font {TkTextFont 12 normal} -lmargin1 1c -lmargin2 0c" widgetDefault
+option add *Text.urlbold "-lmargin1 1c -font {TkTextFont 12} -underline on -background blue -foreground white -relief flat -borderwidth 1" widgetDefault
+option add *Text.urlnormal "-lmargin1 1c -font {TkTextFont 12} -foreground blue -underline on -background {} -relief flat" widgetDefault
+option add *Text.normal "-font {TkTextFont 12}" widgetDefault
+option add *Text.bold "-font {TkTextFont 10 bold}" widgetDefault
+option add *Text.lognormal "-font {TkTextFont 10}" widgetDefault
+option add *Text.logbold "-font {TkTextFont 10 bold}" widgetDefault
+option add *Text.logtable "-font {TkTextFont 10} -relief solid -borderwidth 1" widgetDefault
+option add *Text.logtbllist1 "-font {TkTextFont 10} -relief solid -borderwidth 1 -background #ffffb0" widgetDefault
+option add *Text.logtbllist2 "-font {TkTextFont 10} -relief solid -borderwidth 1 -background #ffffff" widgetDefault
+option add *Text.loggreen "-font {TkTextFont 10} -foreground darkgreen" widgetDefault
+option add *Text.logred "-font {TkTextFont 10} -foreground red" widgetDefault
+option add *Text.loggreenbg "-font {TkTextFont 10} -background lightgreen" widgetDefault
+option add *Text.loggreenbgbold "-font {TkTextFont 10 bold} -background lightgreen" widgetDefault
+option add *Text.logredbgm "-font {TkTextFont 10 normal} -background tomato" widgetDefault
+option add *Text.logyellowbgm "-font {TkTextFont 10 normal} -background yellow" widgetDefault
+option add *Text.loggreenbgm "-font {TkTextFont 10 normal} -background lightgreen" widgetDefault
+option add *Text.logdownload "-font {TkTextFont 8} -background #fff8dc" widgetDefault
+option add *Text.logprefix "-font {TkTextFont 10 bold} -foreground darkorange" widgetDefault
+option add *Text.logtittle "-font {TkTextFont 14 bold} -justify center" widgetDefault
+option add *Text.logblinkgreen1 "-background green -foreground black" widgetDefault
+option add *Text.logblinkred1 "-background #ce5555 -foreground white" widgetDefault
+option add *Text.logblinkyellow1 "-background #ffd700 -foreground black" widgetDefault
+option add *Text.logblinkgreen2 "-background {} -foreground {}" widgetDefault
+option add *Text.logblinkred2 "-background {} -foreground {}" widgetDefault
+option add *Text.logblinkyellow2 "-background {} -foreground {}" widgetDefault
+option add *Text.blinkred1 "-background #ce5555 -foreground white" widgetDefault
+option add *Text.blinkred2 "-background {} -foreground {}" widgetDefault
+option add *Text.blinkgreen1 "-background green -foreground black" widgetDefault
+option add *Text.blinkgreen2 "-background {} -foreground {}" widgetDefault
+option add *stripebackground "#e0e8f0" widgetDefault
+option add *Tablelist.install "lightgreen" widgetDefault
+option add *Tablelist.uninstall "tomato" widgetDefault
+option add *tooltip "-fg black -bg lightyellow" widgetDefault
+option add *tooltibgr "-bd 1 -bg black" widgetDefault
+
 array set config {
-    tree:install darkgreen
-    tree:uninstall darkred
-    tree:normal black
-    tree:bg white
-    tree:installed darkblue
-    text:tittle "-font {TkTextFont 20 bold} -justify center -wrap word"
-    text:category "-justify right -font {TkTextFont 10} -wrap word"
-    text:propname "-font {TkTextFont 12 bold} -wrap word"
-    text:propvalue "-font {TkTextFont 12 normal} -lmargin1 2c -wrap word"
-    text:propbold "-font {TkTextFont 12 bold} -lmargin1 2c -wrap word"
-    text:descript "-font {TkTextFont 12 normal} -wrap word -lmargin1 1c -lmargin2 0c"
-    text:urlbold "-font {TkTextFont 12} -underline on -background blue -foreground white -relief flat -borderwidth 1 -wrap word"
-    text:urlnormal " -font {TkTextFont 12} -foreground blue -underline on -background {} -relief flat -wrap word"
-    text:normal "-font {TkTextFont 12} -wrap word"
-    text:bold "-font {TkTextFont 10 bold} -wrap word"
-    txtlog:normal "-font {TkTextFont 10} -wrap word"
-    txtlog:bold "-font {TkTextFont 10 bold} -wrap word"
-    txtlog:table "-font {TkTextFont 10} -relief solid -borderwidth 1 -wrap word"
-    txtlog:tbllist1 "-font {TkTextFont 10} -relief solid -borderwidth 1 -background #ffffb0 -wrap word"
-    txtlog:tbllist2 "-font {TkTextFont 10} -relief solid -borderwidth 1 -background #ffffff -wrap word"
-    txtlog:green "-font {TkTextFont 10} -foreground darkgreen -wrap word"
-    txtlog:red "-font {TkTextFont 10} -foreground red -wrap word"
-    txtlog:greenbg "-font {TkTextFont 10} -background lightgreen -wrap word"
-    txtlog:greenbgbold "-font {TkTextFont 10 bold} -background lightgreen -wrap word"
-    txtlog:redbgm "-font {TkTextFont 10 normal} -background tomato -wrap word"
-    txtlog:yellowbgm "-font {TkTextFont 10 normal} -background yellow -wrap word"
-    txtlog:greenbgm "-font {TkTextFont 10 normal} -background lightgreen -wrap word"
-    txtlog:download "-font {TkTextFont 8} -background #fff8dc -wrap word"
-    txtlog:prefix "-font {TkTextFont 10 bold} -foreground darkorange -wrap word"
-    txtlog:tittle "-font {TkTextFont 14 bold} -justify center -wrap word"
     moreInfo yes
+    theme {}
 }
 
 set icon_reload [image create photo -data {
@@ -192,14 +208,14 @@ set ::uilog::striptbl 0
 
         set scrh [winfo screenheight $widget]    ; # 1) flashing window fix
         set scrw [winfo screenwidth $widget]     ; # 1) flashing window fix
-        set tooltip [toplevel $widget.tooltip -bd 1 -bg black]
+        set tooltip [eval "toplevel $widget.tooltip [option get . tooltibgr {}]"]
         wm geometry $tooltip +$scrh+$scrw        ; # 1) flashing window fix
         wm overrideredirect $tooltip 1
 
         if {$tcl_platform(platform) == {windows}} { ; # 3) wm attributes...
                 wm attributes $tooltip -topmost 1   ; # 3) assumes...
         }                                           ; # 3) Windows
-        pack [label $tooltip.label -bg lightyellow -fg black -text $text -justify left]
+        pack [eval "label $tooltip.label [option get . tooltip {}] -text \"$text\" -justify left"]
 
         set width [winfo reqwidth $tooltip.label]
         set height [winfo reqheight $tooltip.label]
@@ -279,14 +295,17 @@ proc ::uipkg::beautify_tree {} {
             set pkgname [$::uipkg::pkgTree itemcget $item -text]
             
             if {$pkgDB($pkgname:installed) == yes} {
-                $::uipkg::pkgTree itemconfigure $item -fill $config(tree:installed) -image $icon_installed
+		set xxx [option get $::uipkg::pkgTree installed Tree]
+                $::uipkg::pkgTree itemconfigure $item -fill $xxx -image $icon_installed
             } else {
-                $::uipkg::pkgTree itemconfigure $item -fill $config(tree:normal) -image $icon_pkg
+		set xx [option get $::uipkg::pkgTree normal Tree]
+
+                $::uipkg::pkgTree itemconfigure $item -fill $xx -image $icon_pkg
             }
             if {[info exist todo($pkgname:do)]} {
                 switch $todo($pkgname:do) {
-                    uninstall {$::uipkg::pkgTree itemconfigure $item -fill $config(tree:uninstall) -image $icon_remove }
-                    install {$::uipkg::pkgTree itemconfigure $item -fill $config(tree:install) -image $icon_install}
+                    uninstall {$::uipkg::pkgTree itemconfigure $item -fill  [option get $::uipkg::pkgTree uninstall Tree] -image $icon_remove }
+                    install {$::uipkg::pkgTree itemconfigure $item -fill [option get $::uipkg::pkgTree install Tree] -image $icon_install}
                 }
             }
         }
@@ -333,10 +352,10 @@ proc ::uipkg::add-to-install {pkgname} {
         }
         set todo($pkgname:do) install 
         $::uipkg::tableIntall insert end [list $pkgname yes $action no]
-        $::uipkg::tableIntall cellconfigure end,2 -background lightgreen
+        $::uipkg::tableIntall cellconfigure end,2 -background [option get $::uipkg::tableIntall install tablelist]
         # set fill color for items in addon tree 
         foreach it $pkgDB($pkgname:treenodes) {
-            $::uipkg::pkgTree itemconfigure $it -fill $config(tree:install) -image $icon_install
+            $::uipkg::pkgTree itemconfigure $it -fill [option get $::uipkg::pkgTree install Tree] -image $icon_install
         }
     }
 }
@@ -391,10 +410,10 @@ proc ::uipkg::add-to-uninstall {pkgname {force yes}} {
         set todo($pkgname:do) uninstall 
         $::uipkg::tableIntall insert end [list $pkgname "" [mc "Uninstall"] $force]
         $::uipkg::tableIntall cellconfigure end,1 -editable no 
-        $::uipkg::tableIntall cellconfigure end,2 -background tomato
+        $::uipkg::tableIntall cellconfigure end,2 -background [option get $::uipkg::tableIntall uninstall tablelist]
         # set fill color for items in addon tree 
         foreach it $pkgDB($pkgname:treenodes) {
-            $::uipkg::pkgTree itemconfigure $it -fill $config(tree:uninstall) -image $icon_remove
+            $::uipkg::pkgTree itemconfigure $it -fill [option get $::uipkg::pkgTree uninstall Tree] -image $icon_remove
         }
     }
 }
@@ -567,11 +586,11 @@ proc ::uipkg::disable-action-buttons {} {
 proc ::uipkg::infoText-add-url {urltag urlname cmd} {
     global config
     #make url
-    $::uipkg::infoText tag bind $urltag <Any-Enter> "$::uipkg::infoText tag configure $urltag $config(text:urlbold)"
-    $::uipkg::infoText tag bind $urltag <Any-Leave> "$::uipkg::infoText tag configure $urltag $config(text:urlnormal)"
+    $::uipkg::infoText tag bind $urltag <Any-Enter> "$::uipkg::infoText tag configure $urltag [option get $::uipkg::infoText urlbold Text]"
+    $::uipkg::infoText tag bind $urltag <Any-Leave> "$::uipkg::infoText tag configure $urltag [option get $::uipkg::infoText urlnormal Text]"
     $::uipkg::infoText tag bind $urltag <1> $cmd
     # set default url state
-    eval $::uipkg::infoText tag configure $urltag $config(text:urlnormal)
+    eval $::uipkg::infoText tag configure $urltag "[option get $::uipkg::infoText urlnormal Text]"
     $::uipkg::infoText insert end $urlname $urltag
 
 }
@@ -1844,6 +1863,12 @@ if {$config(firstRun)} {
 
 ::core::check-vars
 
+# apply color theme
+if [info exist config(theme)] {
+    if {$config(theme) != {}} {
+	option readfile $config(theme) userDefault
+    }
+}
 
 #-----------------------------------------------
 # G U I 
@@ -1873,7 +1898,7 @@ $frame.p add $frame.p.right \
 # pkg tree
 pack $frame.p -expand 1 -fill both
 pack [set fr [frame $frame.p.left.fr]] -expand yes -fill both
-pack [set ::uipkg::pkgTree [Tree $fr.tree -bg $config(tree:bg)]] -fill both -expand yes
+pack [set ::uipkg::pkgTree [Tree $fr.tree]] -fill both -expand yes
 
 # search widget
 variable searchAddon {}
@@ -1985,10 +2010,9 @@ pack [set sw [ScrolledWindow $rpane.info.sw]] -fill both -expand yes
 $sw setwidget [set ::uipkg::infoText [text $sw.text -state disabled]]
 
 #tags of info text
-foreach key [array names config text:* ] {
-    set elems [split $key ":"]
-    set tagname [lindex $elems 1]
-    eval $::uipkg::infoText tag configure $tagname $config($key)
+foreach tagname "tittle category propname propvalue propbold descript urlbold urlnormal normal bold" {
+    set tagname 
+    eval $::uipkg::infoText tag configure $tagname [option get $::uipkg::infoText $tagname text] -wrap word
 }
 
 # blinked tags
@@ -1996,12 +2020,10 @@ $::uipkg::infoText tag configure blinkred -font {TkTextFont 12}
 $::uipkg::infoText tag configure blinkgreen -font {TkTextFont 12}
 
 # text binks
-::uipkg::textToggle "$::uipkg::infoText tag configure blinkred -background \
-            #ce5555 -foreground white" 400 "$::uipkg::infoText tag configure \
-            blinkred -background {} -foreground {}" 200
-::uipkg::textToggle "$::uipkg::infoText tag configure blinkgreen -background \
-            green -foreground black" 400 "$::uipkg::infoText tag configure \
-            blinkgreen -background {} -foreground {}" 200
+::uipkg::textToggle "$::uipkg::infoText tag configure blinkred [option get $::uipkg::infoText blinkred1 text]" 400 "
+            $::uipkg::infoText tag configure blinkred [option get $::uipkg::infoText blinkred2 text]" 200
+::uipkg::textToggle "$::uipkg::infoText tag configure blinkgreen [option get $::uipkg::infoText blinkgreen1 text]" 400 "
+            $::uipkg::infoText tag configure [option get $::uipkg::infoText blinkgreen2 text]" 200
 
 # todo pane contains: table, cancel button
 set frame $rpane.todo
@@ -2025,7 +2047,7 @@ $sw setwidget [set ::uipkg::tableIntall [tablelist::tablelist $frame.tbl \
                                              } \
                                              -labelcommand tablelist::sortByColumn \
                                              -editstartcommand editStartCmd \
-                                             -stripebackground \#e0e8f0 
+                                             -stripebackground [option get . stripebackground {}]
                                         ]]
 
 if {[$::uipkg::tableIntall cget -selectborderwidth] == 0} {
@@ -2075,25 +2097,20 @@ proc editStartCmd {tbl row col text} {
 #------------------------------
 set frame [$nb getframe nb_log]
 pack [set sw [ScrolledWindow $frame.swl]] -fill both -expand true
-$sw setwidget [set ::uilog::text [text $frame.text -wrap word -font {TkTextFont 10} -state disabled]]
+$sw setwidget [set ::uilog::text [text $frame.text -wrap word -state disabled]]
 # tags
-foreach key [array names config txtlog:* ] {
-    set elems [split $key ":"]
-    set tagname [lindex $elems 1]
-    eval $::uilog::text tag configure $tagname $config($key) -wrap word
+
+foreach tagname "normal bold table tbllist1 tbllist2 green red greenbg greenbgbold redbgm yellowbgm greenbgm download prefix tittle" {
+    eval $::uilog::text tag configure $tagname [option get $::uilog::text log$tagname text] -wrap word
 }
+
 # green and red blink
-::uipkg::textToggle "$::uilog::text tag configure blinkgreen -background \
-        green -foreground black;
-        $::uilog::text tag configure blinkred -background \
-        #ce5555 -foreground white; \
-        $::uilog::text tag configure blinkyellow -background \
-        #ffd700 -foreground black" 400 "$::uilog::text tag configure \
-        blinkgreen -background {} -foreground {};
-        $::uilog::text tag configure \
-        blinkred -background {} -foreground {}; \
-        $::uilog::text tag configure \
-        blinkyellow -background {} -foreground {}" 200
+::uipkg::textToggle "$::uilog::text tag configure blinkgreen [option get $::uilog::text logblinkgreen1 text];
+        $::uilog::text tag configure blinkred [option get $::uilog::text logblinkred1 text]; \
+        $::uilog::text tag configure blinkyellow [option get $::uilog::text logblinkyellow1 text]" 400 "
+        $::uilog::text tag configure blinkgreen [option get $::uilog::text logblinkgreen2 text];
+        $::uilog::text tag configure blinkred [option get $::uilog::text logblinkred2 text]; \
+        $::uilog::text tag configure blinkyellow [option get $::uilog::text logblinkyellow2 text]" 200
 
 #-----------------------------------------------
 # Key and mouse binds
@@ -2175,14 +2192,32 @@ proc ::uipkg::export {} {
     }
 }
 
+proc ::uipkg::settheme {theme} {
+    global config
+    tk_messageBox -parent . -title [mc "Set Theme"] -icon question -type ok -message [mc "You need restart to apply color theme."]
+    set config(theme) $theme
+}
+
 proc _treepopup {item} {
     global icon_install icon_remove icon_reload
     global pkgDB pkgCache
     global target_program
+    global rootdir
 
     catch {destroy $::uipkg::pkgTree.menu}     
     set m [menu $::uipkg::pkgTree.menu]
     
+    set themes [menu $m.themes ]
+    $themes add command -accelerator {} -label "*Default*" \
+	-compound left -command [list ::uipkg::settheme {}]
+    
+    foreach f [lsort [glob -nocomplain -type {f l} [file join $rootdir themes *.xrdb]]] {
+	$themes add command -accelerator {} -label [file tail $f] \
+	    -compound left -command [list ::uipkg::settheme $f]
+    }
+   
+    $m add cascade -label "Themes" -menu $themes
+
     $::uipkg::pkgTree selection set $item
 
     set pkgname [$::uipkg::pkgTree itemcget [lindex [$::uipkg::pkgTree selection get] 0] -text]
