@@ -84,8 +84,8 @@ option add *Text.blinkred2 "-background {} -foreground {}" widgetDefault
 option add *Text.blinkgreen1 "-background green -foreground black" widgetDefault
 option add *Text.blinkgreen2 "-background {} -foreground {}" widgetDefault
 option add *stripebackground "#e0e8f0" widgetDefault
-option add *Tablelist.install "lightgreen" widgetDefault
-option add *Tablelist.uninstall "tomato" widgetDefault
+option add *Tablelist.install "-background lightgreen" widgetDefault
+option add *Tablelist.uninstall "-background tomato" widgetDefault
 option add *tooltip "-fg black -bg lightyellow" widgetDefault
 option add *tooltibgr "-bd 1 -bg black" widgetDefault
 
@@ -254,14 +254,14 @@ proc ::uipkg::tree-add {t category item} {
         append categ "/"
         if {[$t exists $categ] == 0} {
             $t insert end $parentcat $categ \
-                -text $c -image $icon_folder
+                -text $c -image $icon_folder -fill [option get $::uipkg::pkgTree normal Tree]
         }
         set parentcat $categ
     }
     # add item
     set itemname $parentcat$item
     if {[$t exists $itemname] == 0} {
-        $t insert end $parentcat $itemname -text $item -image $icon_pkg
+        $t insert end $parentcat $itemname -text $item -image $icon_pkg -fill [option get $::uipkg::pkgTree normal Tree]
         return $itemname
     }
 }
@@ -295,12 +295,9 @@ proc ::uipkg::beautify_tree {} {
             set pkgname [$::uipkg::pkgTree itemcget $item -text]
             
             if {$pkgDB($pkgname:installed) == yes} {
-		set xxx [option get $::uipkg::pkgTree installed Tree]
-                $::uipkg::pkgTree itemconfigure $item -fill $xxx -image $icon_installed
+                $::uipkg::pkgTree itemconfigure $item -fill [option get $::uipkg::pkgTree installed Tree] -image $icon_installed
             } else {
-		set xx [option get $::uipkg::pkgTree normal Tree]
-
-                $::uipkg::pkgTree itemconfigure $item -fill $xx -image $icon_pkg
+                $::uipkg::pkgTree itemconfigure $item -fill [option get $::uipkg::pkgTree normal Tree] -image $icon_pkg
             }
             if {[info exist todo($pkgname:do)]} {
                 switch $todo($pkgname:do) {
@@ -352,7 +349,7 @@ proc ::uipkg::add-to-install {pkgname} {
         }
         set todo($pkgname:do) install 
         $::uipkg::tableIntall insert end [list $pkgname yes $action no]
-        $::uipkg::tableIntall cellconfigure end,2 -background [option get $::uipkg::tableIntall install tablelist]
+        eval "$::uipkg::tableIntall cellconfigure end,2 [option get $::uipkg::tableIntall install tablelist]"
         # set fill color for items in addon tree 
         foreach it $pkgDB($pkgname:treenodes) {
             $::uipkg::pkgTree itemconfigure $it -fill [option get $::uipkg::pkgTree install Tree] -image $icon_install
@@ -410,7 +407,7 @@ proc ::uipkg::add-to-uninstall {pkgname {force yes}} {
         set todo($pkgname:do) uninstall 
         $::uipkg::tableIntall insert end [list $pkgname "" [mc "Uninstall"] $force]
         $::uipkg::tableIntall cellconfigure end,1 -editable no 
-        $::uipkg::tableIntall cellconfigure end,2 -background [option get $::uipkg::tableIntall uninstall tablelist]
+        eval "$::uipkg::tableIntall cellconfigure end,2 [option get $::uipkg::tableIntall uninstall tablelist]"
         # set fill color for items in addon tree 
         foreach it $pkgDB($pkgname:treenodes) {
             $::uipkg::pkgTree itemconfigure $it -fill [option get $::uipkg::pkgTree uninstall Tree] -image $icon_remove
@@ -1913,7 +1910,7 @@ pack [set searchEntry [entry $fr.entr -textvariable searchAddon]] \
     -side top -expand yes -fill x
 
 setTooltip $searchEntry [mc "Search addon by given pattern
-You can use *, and ?, \[chars\] in pattern"]
+You can use *, and ?, \\\[chars\\\] in pattern"]
 
 foreach f "name all category description version www conflicts distfile
                 unpack maintainer author provide
@@ -2023,7 +2020,7 @@ $::uipkg::infoText tag configure blinkgreen -font {TkTextFont 12}
 ::uipkg::textToggle "$::uipkg::infoText tag configure blinkred [option get $::uipkg::infoText blinkred1 text]" 400 "
             $::uipkg::infoText tag configure blinkred [option get $::uipkg::infoText blinkred2 text]" 200
 ::uipkg::textToggle "$::uipkg::infoText tag configure blinkgreen [option get $::uipkg::infoText blinkgreen1 text]" 400 "
-            $::uipkg::infoText tag configure [option get $::uipkg::infoText blinkgreen2 text]" 200
+            $::uipkg::infoText tag configure blinkgreen [option get $::uipkg::infoText blinkgreen2 text]" 200
 
 # todo pane contains: table, cancel button
 set frame $rpane.todo
