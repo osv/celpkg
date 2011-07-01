@@ -1981,7 +1981,7 @@ pack [set installButton [button $fr.install -text [mc "Install"] -state disabled
                                    ::uipkg::toggle-mark-for-uninstall}]] \
     [ set proceedButton [button $fr.proceed -text [mc "Proceed all tasks"] \
                              -command {::uipkg::proceed-todo} ]] \
-    [ set configButton [button $fr.config -text [mc "Configure"] -state normal \
+    [ set configButton [button $fr.config -text [mc "Configure"] -state disabled \
                                -command { 
                                    ::uipkg::setTree-selection $::uipkg::pkgTree \
                                        [set node [lindex $pkgDB($currentView:treenodes) 0]]
