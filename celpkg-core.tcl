@@ -583,6 +583,7 @@ proc read_index {fname quiet} {
     fconfigure $fh -encoding utf-8
     if {!$quiet} {
 	LOG [list "Loading index file: " normal $fname\n bold]
+	::misc::sleep 1
     }
 
     set lineNum 0
@@ -661,6 +662,7 @@ proc read_index {fname quiet} {
 		if [info exist pkgDB($curAddon:category)] {
 		    catch {LOG [list "Warning: " bold "$fname:$lineNum: " normal " Redefining addon (old was found in " normal \
 				    "$pkgDB($curAddon:indexf):$pkgDB($curAddon:line):)\n" red]}
+		    ::misc::sleep 1
 		}
 
 		foreach var $dbvars {
@@ -3462,6 +3464,15 @@ proc ::core::load-index {{quiet no}} {
     # other user's index file in userindex/ directory
     ::core::load-index-recursive [file join $pkgpath userindex] $quiet
     read_pkg $quiet
+
+    if {$GUI && !$quiet} {
+	set addons [llength [array names pkgDB *:category]]
+	LOG [list $addons greenbgbold \
+			  " add-ons available\n" greenbg]
+	LOG [list [llength [array names pkgCache *:name]] greenbgbold \
+			  " add-ons installed\n" greenbg]
+	::misc::sleep 250
+    }
 }
 
 proc ::core::update-index {} {

@@ -2327,12 +2327,6 @@ $nb raise nb_pkg
 
 ::uipkg::beautify_tree
 
-set addons [llength [array names pkgDB *:category]]
-::uilog::log [list $addons greenbgbold \
-                  " addons available\n" greenbg]
-::uilog::log [list [llength [array names pkgCache *:name]] greenbgbold \
-                  " addons installed\n" greenbg]
-
 if {![file exist [file join $pkgpath $dwnlIndexDir]] &&
     ![file exist [file join $pkgpath userindex]]} {
     if {[tk_messageBox -title [mc "Update?"] -icon question \
