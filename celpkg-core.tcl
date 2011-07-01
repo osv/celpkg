@@ -3443,6 +3443,15 @@ proc ::core::update-celpkg {rootdir} {
 
 proc ::core::load-index {{quiet no}} {
     global pkgpath dwnlIndexDir
+    global pkgDB pkgCache GUI
+
+    # clear all first
+    catch {unset {pkgDB}}
+    catch {unset {pkgCache}}
+    if {$GUI} {
+	global ::uipkg::pkgTree
+	$::uipkg::pkgTree delete [$::uipkg::pkgTree nodes root]
+    }
 
     # read piped all zip files
     foreach file [glob -nocomplain -type {f} [file join $pkgpath $dwnlIndexDir *.zip]] {
