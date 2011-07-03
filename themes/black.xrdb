@@ -14,7 +14,7 @@
 *Text.normal:			 -font {TkTextFont 12}
 *Text.bold:			 -font {TkTextFont 10 bold}
 *Text.lognormal:		 -font {TkTextFont 10}
-*Text.logbold:			 -font {TkTextFont 10 bold}
+*Text.logbold:			 -font {TkTextFont 10 bold} -foreground white
 *Text.logtable:			 -font {TkTextFont 10} -relief solid -borderwidth 1 -background #1f1f10
 *Text.logtbllist1:		 -font {TkTextFont 10} -relief solid -borderwidth 1 -background #1f1f00
 *Text.logtbllist2:		 -font {TkTextFont 10} -relief solid -borderwidth 1 -background #2f2f2f
