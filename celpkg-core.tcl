@@ -489,7 +489,7 @@ proc ::misc::start_target_program {} {
 	    set command [lindex [registry get $path {}] 0]
 
 	    # first try $target_program in $cpath
-	    if {[catch {eval exec [file join $cpath $target_program] $target_program_opt_dir [list $cpath] &} emsg]} {
+	    if {[catch {eval exec [file join $cpath $target_program.exe] $target_program_opt_dir [list $cpath] &} emsg]} {
 		if {[catch {eval exec $target_program $target_program_opt_dir [list $cpath] &} emsg]} {
 		    # otherwise associated command with $target_program_ext
 		    if {[catch {eval exec [list $command] $target_program_opt_dir [list $cpath] &} emsg]} {
@@ -502,18 +502,22 @@ proc ::misc::start_target_program {} {
 		    }
 		}
 	    } else {
-		LOG [list "launching $target_program from $target_program_opt_dir\n" bold]
+		LOG [list "launching $target_program from $cpath\n" bold]
 	    }
 	}
 
         default {
-	    if {[catch {eval exec $target_program $target_program_opt_dir [list $cpath] &} emsg]} {
-		MessageDlg .browse_err -aspect 50000 -icon info \
-		    -buttons ok -default 0 -cancel 0 -type user \
-		    -message \
-		    [format \
-			 [::msgcat::mc "Error launching %s\n\n%s"] \
-			 $target_program $emsg]
+	    if {[catch {eval exec [file join $cpath $target_program] $target_program_opt_dir [list $cpath] &} emsg]} {
+		if {[catch {eval exec $target_program $target_program_opt_dir [list $cpath] &} emsg]} {
+		    MessageDlg .browse_err -aspect 50000 -icon info \
+			-buttons ok -default 0 -cancel 0 -type user \
+			-message \
+			[format \
+			     [::msgcat::mc "Error launching %s\n\n%s"] \
+			     $target_program $emsg]
+		}
+	    } else {
+		LOG [list "launching $target_program from $cpath\n" bold]
 	    }
 	}
     }
