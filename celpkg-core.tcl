@@ -3326,7 +3326,7 @@ proc ::core::load-index-recursive {sourcedir quiet} {
     }
     foreach f [lsort [glob -nocomplain -type {f l} [file join $sourcedir *.zip]]] {
 	# read piped zip file
-	read_index "|unzip -p $f \"*.index\"" $quiet	
+	read_index "|unzip -p \"$f\" \"*.index\"" $quiet	
     }
 
     # Now look for any sub direcories
@@ -3364,7 +3364,7 @@ proc ::core::update-celpkg {rootdir} {
 	set file [file nativename $file]
 	LOG [list "===>  " prefix [mc "Read $file"]\n normal]
 
-	set fh [open "|unzip -p $file \"*.update\"" "r"]
+	set fh [open "|unzip -p \"$file\" \"*.update\"" "r"]
 
 	while {[gets $fh line] >= 0} {
 	    # structure of line:
@@ -3457,7 +3457,7 @@ proc ::core::load-index {{quiet no}} {
 
     # read piped all zip files
     foreach file [glob -nocomplain -type {f} [file join $pkgpath $dwnlIndexDir *.zip]] {
-	read_index "|unzip -p $file \"*.index\"" $quiet	
+	read_index "|unzip -p \"$file\" \"*.index\"" $quiet	
     }
 
 
