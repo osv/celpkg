@@ -3365,7 +3365,7 @@ proc ::core::update-celpkg {rootdir} {
     set updatelist {}
 
     foreach file [glob -nocomplain -type {f} [file join $dwnPath *.zip]] {
-	set file [file nativename $file]
+	set file [file normalize [file nativename $file]]
 	LOG [list "===>  " prefix [mc "Read $file"]\n normal]
 
 	set fh [open "|unzip -p \"$file\" \"*.update\"" "r"]
