@@ -1,0 +1,26 @@
+Package manager
+---------------
+
+ UNIX
+-------
+
+You need tcl/tk with BWidget, wget.  (Almost all dependencies can be installed
+if you install tkabber for example).
+
+GUI interface:
+
+  %wish8.5 celpkgk.tcl
+
+Command line:
+
+  %tclsh celpkg.tcl
+
+Command line interface not ready for use. To configure directories and
+url of repository you still need to launch GUI (celpkgk).
+
+ Windows
+--------
+
+You may  is use  Cygwin (binutils, tcl/tk,  wget, Bwidget you  need to
+manually   install),   OR   you   can  download   binary   pack   from
+http://celpkg.sf.net
